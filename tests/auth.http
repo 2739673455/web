@@ -1,0 +1,48 @@
+### 注册账号
+POST http://localhost:12321/auth/register
+
+{
+    "email": "z4i2j@example.com",
+    "username": "admin",
+    "password": "123456"
+}
+
+### 登录
+POST http://localhost:12321/auth/login
+
+{
+    "email": "z4i2j@example.com",
+    "password": "123456"
+}
+
+### 获取用户信息
+GET http://localhost:12321/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwic2NvcGUiOiJub3JtYWwiLCJleHAiOjE3Njg2NDY2ODQuOTYxNzY3LCJqdGkiOiI3MWQyZDAzYi1hNGI0LTRkYzctODQ1OC1lODE3ZWZkMTM4YmEifQ.7voJXJLOC44a2fVXWuXAt1QQzhBOAuDcc-vdG54UY4c
+
+### 修改用户名
+POST http://localhost:12321/auth/me/username
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwic2NvcGUiOiJub3JtYWwiLCJleHAiOjE3Njg2NDY2ODQuOTYxNzY3LCJqdGkiOiI3MWQyZDAzYi1hNGI0LTRkYzctODQ1OC1lODE3ZWZkMTM4YmEifQ.7voJXJLOC44a2fVXWuXAt1QQzhBOAuDcc-vdG54UY4c
+
+{
+    "username": "admin"
+}
+
+### 修改用户邮箱
+POST http://localhost:12321/auth/me/email
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwic2NvcGUiOiJub3JtYWwiLCJleHAiOjE3Njg2NDY2ODQuOTYxNzY3LCJqdGkiOiI3MWQyZDAzYi1hNGI0LTRkYzctODQ1OC1lODE3ZWZkMTM4YmEifQ.7voJXJLOC44a2fVXWuXAt1QQzhBOAuDcc-vdG54UY4c
+
+{
+    "email": "z4idj@example.com"
+}
+
+### 修改用户密码
+POST http://localhost:12321/auth/me/password
+Cookie: refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwic2NvcGUiOiJub3JtYWwiLCJleHAiOjE3NjkyNTEzMzMuODg0Mzg4LCJqdGkiOiI5Yzg0Y2E5Ni0yOWJhLTRhYzktODE4NC1mODU2Njk0NjkzZmUifQ.9jo3p96y0K9_HxuwBlvQ5F7GM66cIpj6S_Z9Gl6b-Jk
+
+{
+    "password": "123321"
+}
+
+### 用户登出
+POST http://localhost:12321/auth/logout
+Cookie: refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwic2NvcGUiOiJub3JtYWwiLCJleHAiOjE3NjkyNTEzNDguMzU4MDM0LCJqdGkiOiIzMjdiNWE0OC1lN2JjLTRhMTctYTg1Zi04MGVkNWZiZmNhODMifQ.oBrWehHAjsXlRTvgu7P_IfFwqxEWJShLSISFlZh8LSg

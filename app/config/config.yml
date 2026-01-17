@@ -1,0 +1,34 @@
+db: # 数据库
+  app: # 应用数据库
+    host: 127.0.0.1
+    port: 3306
+    user: root
+    password: "123321"
+    database: chat
+  auth: # 认证数据库
+    host: 127.0.0.1
+    port: 3306
+    user: root
+    password: "123321"
+    database: auth
+
+log: # 日志
+  app:
+    level: INFO # 日志级别(DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    to_console: true # 是否输出到控制台
+    to_file: true # 是否输出到文件
+    log_dir: app # 日志目录
+    max_file_size: 10MB # 单个日志文件最大大小
+  auth:
+    level: INFO # 日志级别(DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    to_console: true # 是否输出到控制台
+    to_file: true # 是否输出到文件
+    log_dir: auth # 日志目录
+    max_file_size: 10MB # 单个日志文件最大大小
+
+secret_key: "d6a5d730ec247d487f17419df966aec9d4c2a09d2efc9699d09757cf94c68b01"
+algorithm: HS256
+access_token_expire_minutes: 60
+refresh_token_expire_days: 7
+encryption_key: "d6a5d730ec247d487f17419df966aec9d4c2a09d2efc9699d09757cf94c68b01"
+port: 12321
