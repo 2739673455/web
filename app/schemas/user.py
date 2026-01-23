@@ -1,7 +1,13 @@
 from pydantic import BaseModel, EmailStr, Field
 
 
-class TokenPayload(BaseModel):
+class AccessTokenPayload(BaseModel):
+    sub: int
+    scope: list[str]
+    exp: float
+
+
+class RefreshTokenPayload(BaseModel):
     sub: int
     scope: list[str]
     exp: float

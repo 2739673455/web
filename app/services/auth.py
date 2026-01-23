@@ -15,7 +15,7 @@ from app.exceptions.user import (
     UserDisabledError,
     UserNotFoundError,
 )
-from app.schemas.user import TokenPayload
+from app.schemas.user import RefreshTokenPayload
 
 
 def _generate_refresh_token(user_id: int, scopes: list[str]) -> dict:
@@ -47,7 +47,6 @@ def _generate_access_token(jti: str, user_id: int, scopes: list[str]) -> str:
         "sub": str(user_id),
         "scope": " ".join(scopes),
         "exp": expire.timestamp(),
-        "jti": jti,
     }
     token = jwt.encode(payload, CFG.auth.secret_key, CFG.auth.algorithm)
     return token
@@ -145,7 +144,7 @@ async def create_refresh_token(
 
 
 async def create_access_token(
-    session: AsyncSession, payload: TokenPayload, scopes: list[str]
+    session: AsyncSession, payload: RefreshTokenPayload, scopes: list[str]
 ) -> dict:
     """创建访问令牌,同时刷新刷新令牌"""
     jti, user_id, payload_scope = payload.jti, payload.sub, payload.scope
@@ -173,7 +172,9 @@ async def create_access_token(
     }
 
 
-async def revoke_refresh_token(session: AsyncSession, payload: TokenPayload) -> None:
+async def revoke_refresh_token(
+    session: AsyncSession, payload: RefreshTokenPayload
+) -> None:
     """撤销刷新令牌"""
     jti, user_id = payload.jti, payload.sub
     # 撤销旧的刷新令牌

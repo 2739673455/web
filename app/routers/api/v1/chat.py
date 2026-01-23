@@ -14,7 +14,7 @@ from app.schemas.chat import (
     MessageListResponse,
     SendMessageRequest,
 )
-from app.schemas.user import TokenPayload
+from app.schemas.user import AccessTokenPayload
 from app.services.chat import (
     get_messages,
     image_url_to_cos_url,
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/chat", tags=["聊天功能"])
 @router.post("/get_upload_presigned_url", response_model=GetUploadPresignedUrlResponse)
 async def api_get_upload_presigned_url(
     request: GetUploadPresignedUrlRequest,
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """获取带预签名的上传url"""
     cos_keys = [
@@ -47,7 +47,7 @@ async def api_get_upload_presigned_url(
 async def api_get_messages(
     conversation_id: int,
     session: Annotated[AsyncSession, Depends(get_app_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """获取消息记录"""
     messages = await get_messages(session, conversation_id)
@@ -70,7 +70,7 @@ async def api_get_messages(
 async def api_send_message(
     request: SendMessageRequest,
     session: Annotated[AsyncSession, Depends(get_app_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """发送消息,获取AI流式回复"""
     # 转换图片url为cos_url

@@ -14,7 +14,7 @@ from app.schemas.model_config import (
     ModelConfigResponse,
     UpdateModelConfigRequest,
 )
-from app.schemas.user import TokenPayload
+from app.schemas.user import AccessTokenPayload
 from app.services.model_config import (
     create_model_config,
     delete_model_configs,
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/model_config", tags=["模型配置管理"])
 @router.get("", response_model=ModelConfigListResponse)
 async def api_get_model_configs(
     session: Annotated[AsyncSession, Depends(get_app_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ) -> ModelConfigListResponse:
     """获取模型配置列表"""
     model_configs = await get_model_configs(session, payload.sub)
@@ -50,11 +50,13 @@ async def api_get_model_configs(
 @router.post("/can_create", response_model=CanCreateModelConfigResponse)
 async def api_can_create_model_config(
     request: CanCreateModelConfigRequest,
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ) -> CanCreateModelConfigResponse:
     """检查是否能创建新的模型配置"""
     limit = 3  # 普通用户最多创建3个模型配置
-    if ["normal"] == payload.scope and request.config_count >= limit:
+    if ("add_more_model_config" not in payload.scope) and (
+        request.config_count >= limit
+    ):
         return CanCreateModelConfigResponse(can_create=False, limit=limit)
     return CanCreateModelConfigResponse(can_create=True, limit=limit)
 
@@ -65,7 +67,7 @@ async def api_can_create_model_config(
 async def api_create_model_config(
     request: CreateModelConfigRequest,
     session: Annotated[AsyncSession, Depends(get_app_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ) -> ModelConfigResponse:
     """创建新的模型配置"""
     model_config = await create_model_config(
@@ -90,7 +92,7 @@ async def api_create_model_config(
 async def api_update_model_config(
     request: UpdateModelConfigRequest,
     session: Annotated[AsyncSession, Depends(get_app_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """更新指定模型配置"""
     await update_model_config(
@@ -108,7 +110,7 @@ async def api_update_model_config(
 async def api_delete_model_configs(
     request: DeleteModelConfigRequest,
     session: Annotated[AsyncSession, Depends(get_app_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """批量删除模型配置"""
     await delete_model_configs(session, request.ids)

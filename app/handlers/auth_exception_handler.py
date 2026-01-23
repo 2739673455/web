@@ -2,7 +2,7 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
 from app.exceptions.auth import (
-    ExpiredTokenError,
+    ExpiredAccessTokenError,
     InsufficientPermissionsError,
     InvalidAccessTokenError,
     InvalidRefreshTokenError,
@@ -10,8 +10,8 @@ from app.exceptions.auth import (
 
 
 def register_auth_exception_handlers(app):
-    @app.exception_handler(ExpiredTokenError)
-    async def expired_token_handler(request: Request, exc: ExpiredTokenError):
+    @app.exception_handler(ExpiredAccessTokenError)
+    async def expired_token_handler(request: Request, exc: ExpiredAccessTokenError):
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": str(exc)},

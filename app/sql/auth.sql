@@ -70,8 +70,10 @@ CREATE TABLE `refresh_token` (
 
 INSERT INTO
     `scope` (`name`, `description`)
-VALUES ('normal', '普通用户权限'),
-    ('vip1', '1级VIP权限');
+VALUES (
+        'add_more_model_config',
+        '添加更多模型配置'
+    );
 
 INSERT INTO `group` (`name`) VALUES ('normal'), ('vip1');
 
@@ -92,14 +94,8 @@ INSERT INTO
 SELECT g.id, s.id
 FROM `group` g
     JOIN `scope` s ON (
-        (
-            g.name = 'normal'
-            AND s.name = 'normal'
-        )
-        OR (
-            g.name = 'vip1'
-            AND s.name = 'vip1'
-        )
+        g.name = 'vip1'
+        AND s.name = 'add_more_model_config'
     );
 
 INSERT INTO

@@ -9,5 +9,5 @@ wheels/
 # Virtual environments
 .venv
 
-.log
+logs
 docker/volumes

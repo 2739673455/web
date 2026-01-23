@@ -11,7 +11,7 @@ from app.exceptions.user import (
     UserNotFoundError,
     UserPasswordSameError,
 )
-from app.schemas.user import TokenPayload
+from app.schemas.user import RefreshTokenPayload
 from app.services.auth import create_refresh_token, revoke_refresh_token
 
 password_hash = PasswordHash.recommended()
@@ -115,6 +115,6 @@ async def update_password(session: AsyncSession, user_id: int, password: str) ->
         raise
 
 
-async def logout(session: AsyncSession, payload: TokenPayload) -> None:
+async def logout(session: AsyncSession, payload: RefreshTokenPayload) -> None:
     """用户登出"""
     await revoke_refresh_token(session, payload)

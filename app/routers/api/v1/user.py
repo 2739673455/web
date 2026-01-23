@@ -9,10 +9,11 @@ from app.dependencies.auth import (
 )
 from app.dependencies.database import get_auth_db
 from app.schemas.user import (
+    AccessTokenPayload,
     LoginRequest,
     LoginResponse,
+    RefreshTokenPayload,
     RegisterRequest,
-    TokenPayload,
     UpdateEmailRequest,
     UpdatePasswordRequest,
     UpdateUsernameRequest,
@@ -56,7 +57,7 @@ async def api_login(
 @router.get("/me", response_model=UserResponse)
 async def api_me(
     session: Annotated[AsyncSession, Depends(get_auth_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ) -> UserResponse:
     """获取当前用户信息"""
     user = await get_user(session, payload.sub)
@@ -68,7 +69,7 @@ async def api_me(
 async def api_update_username(
     request: UpdateUsernameRequest,
     session: Annotated[AsyncSession, Depends(get_auth_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """修改用户名"""
     await update_username(session, payload.sub, request.username)
@@ -78,7 +79,7 @@ async def api_update_username(
 async def api_update_email(
     request: UpdateEmailRequest,
     session: Annotated[AsyncSession, Depends(get_auth_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """修改邮箱"""
     await update_email(session, payload.sub, request.email)
@@ -88,7 +89,7 @@ async def api_update_email(
 async def api_update_password(
     request: UpdatePasswordRequest,
     session: Annotated[AsyncSession, Depends(get_auth_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_refresh_token)],
+    payload: Annotated[RefreshTokenPayload, Depends(authenticate_refresh_token)],
 ) -> LoginResponse:
     """修改密码"""
     await update_password(session, payload.sub, request.password)
@@ -99,7 +100,7 @@ async def api_update_password(
 @router.post("/logout")
 async def api_logout(
     session: Annotated[AsyncSession, Depends(get_auth_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_refresh_token)],
+    payload: Annotated[RefreshTokenPayload, Depends(authenticate_refresh_token)],
 ):
     """用户登出"""
     await logout(session, payload)

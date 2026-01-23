@@ -28,7 +28,7 @@ def create_model_config(client, token, name, base_url, model_name, api_key):
         },
         headers={"Authorization": f"Bearer {token}"},
     )
-    return response.json()["id"]
+    return response.json()["config_id"]
 
 
 def test_create_model_config_success(client):
@@ -115,7 +115,7 @@ def test_get_model_configs_with_data(client):
     assert response.status_code == 200
     data = response.json()
     assert len(data["configs"]) == 1
-    assert data["configs"][0]["id"] == config_id
+    assert data["configs"][0]["config_id"] == config_id
     assert data["configs"][0]["name"] == "test_config"
     assert data["configs"][0]["base_url"] == "https://api.openai.com/v1"
     assert data["configs"][0]["model_name"] == "gpt-4"
@@ -157,7 +157,7 @@ def test_update_model_config_success(client):
     response = client.post(
         "/api/v1/model_config/update",
         json={
-            "id": config_id,
+            "config_id": config_id,
             "name": new_name,
             "base_url": new_base_url,
             "model_name": new_model_name,
@@ -185,7 +185,7 @@ def test_update_model_config_not_found(client):
     response = client.post(
         "/api/v1/model_config/update",
         json={
-            "id": 99999,
+            "config_id": 99999,
             "name": fake.name(),
             "base_url": fake.url(),
             "model_name": fake.word(),
@@ -344,7 +344,7 @@ def test_model_config_crud_full_flow(client):
     )
     assert list_response.status_code == 200
 
-    config_id = list_response.json()["configs"][0]["id"]
+    config_id = list_response.json()["configs"][0]["config_id"]
 
     # 3. 更新
     new_name = "Updated Config"
@@ -355,7 +355,7 @@ def test_model_config_crud_full_flow(client):
     update_response = client.post(
         "/api/v1/model_config/update",
         json={
-            "id": config_id,
+            "config_id": config_id,
             "name": new_name,
             "base_url": new_base_url,
             "model_name": new_model_name,
@@ -388,3 +388,82 @@ def test_model_config_crud_full_flow(client):
         "/api/v1/model_config", headers={"Authorization": f"Bearer {token}"}
     )
     assert final_response.json()["configs"] == []
+
+
+def test_can_create_model_config_below_limit(client):
+    """测试检查创建权限 - 配置数量低于限制"""
+    token = get_token(client)
+
+    response = client.post(
+        "/api/v1/model_config/can_create",
+        json={"config_count": 2},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["can_create"] is True
+    assert data["limit"] == 3
+
+
+def test_can_create_model_config_at_limit(client):
+    """测试检查创建权限 - 配置数量达到限制"""
+    token = get_token(client)
+
+    response = client.post(
+        "/api/v1/model_config/can_create",
+        json={"config_count": 3},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["can_create"] is False
+    assert data["limit"] == 3
+
+
+def test_can_create_model_config_above_limit(client):
+    """测试检查创建权限 - 配置数量超过限制"""
+    token = get_token(client)
+
+    response = client.post(
+        "/api/v1/model_config/can_create",
+        json={"config_count": 5},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["can_create"] is False
+    assert data["limit"] == 3
+
+
+def test_can_create_model_config_no_token(client):
+    """测试检查创建权限时未提供token"""
+    response = client.post(
+        "/api/v1/model_config/can_create",
+        json={"config_count": 1},
+    )
+    assert response.status_code == 401
+
+
+def test_can_create_model_config_invalid_token(client):
+    """测试检查创建权限时token无效"""
+    response = client.post(
+        "/api/v1/model_config/can_create",
+        json={"config_count": 1},
+        headers={"Authorization": "Bearer invalid_token"},
+    )
+    assert response.status_code == 401
+
+
+def test_can_create_model_config_with_zero_count(client):
+    """测试检查创建权限 - 配置数量为0"""
+    token = get_token(client)
+
+    response = client.post(
+        "/api/v1/model_config/can_create",
+        json={"config_count": 0},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["can_create"] is True
+    assert data["limit"] == 3

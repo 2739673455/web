@@ -1,0 +1,10 @@
+@api_url = http://localhost:12321/api/v1
+
+### 注册
+POST {{api_url}}/user/register
+
+{
+    "email": "123@example.com",
+    "username": "user_01",
+    "password": "password"
+}

@@ -12,7 +12,7 @@ from app.schemas.conversation import (
     CreateConversationRequest,
     DeleteConversationRequest,
 )
-from app.schemas.user import TokenPayload
+from app.schemas.user import AccessTokenPayload
 from app.services.chat import image_url_to_get_presigned_url
 from app.services.conversation import (
     create_conversation,
@@ -28,7 +28,7 @@ router = APIRouter(prefix="/conversation", tags=["对话管理"])
 @router.get("", response_model=ConversationListResponse)
 async def api_get_conversations(
     session: Annotated[AsyncSession, Depends(get_app_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """获取对话列表"""
     conversations = await get_conversations(session, payload.sub)
@@ -48,7 +48,7 @@ async def api_get_conversations(
 async def api_create_conversation(
     request: CreateConversationRequest,
     session: Annotated[AsyncSession, Depends(get_app_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ) -> ConversationResponse:
     """创建新对话"""
     conversation = await create_conversation(
@@ -67,7 +67,7 @@ async def api_create_conversation(
 async def api_generate_conversation_title(
     request: SendMessageRequest,
     session: Annotated[AsyncSession, Depends(get_app_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """生成对话标题"""
     # 转换预签名上传url为预签名下载url
@@ -94,7 +94,7 @@ async def api_generate_conversation_title(
 async def api_delete_conversations(
     request: DeleteConversationRequest,
     session: Annotated[AsyncSession, Depends(get_app_db)],
-    payload: Annotated[TokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """删除对话"""
     await delete_conversations(session, request.ids)
