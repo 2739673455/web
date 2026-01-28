@@ -117,8 +117,8 @@ async def stream_response(
         # 转换图片url为cos_url
         await image_url_to_cos_url(messages)
         # 用户消息存入数据库
-        user_message_id = messages[-1].message_id  # 如果有消息id，说明已经存过数据库了
-        if not user_message_id:
+        user_message_id = messages[-1].message_id
+        if not user_message_id:  # 如果没有消息id才存入数据库
             user_message = await save_message_in_db(
                 db_session, messages[-1], user_id, conversation_id
             )

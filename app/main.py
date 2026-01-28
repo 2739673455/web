@@ -1,4 +1,3 @@
-import os
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -34,7 +33,7 @@ app.add_middleware(
     allow_headers=["*"],  # 允许的请求头列表
 )
 
-# 异常处理
+# 注册异常处理
 register_exception_handlers(app)
 
 
@@ -50,6 +49,4 @@ if __name__ == "__main__":
         "app.main:app",
         host="0.0.0.0",
         port=CFG.port,
-        # reload=True,
-        # reload_dirs=[os.path.dirname(__file__)],
     )
