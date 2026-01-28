@@ -185,7 +185,7 @@ button.no-hover {
 
 button.no-hover:hover {
   background-color: transparent !important;
-  color: inherit !important;
+  color: #b91c1c !important;
 }
 
 /* Text selection styles */

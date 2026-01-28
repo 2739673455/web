@@ -72,6 +72,7 @@ export const sendMessage = async (
   onChunk: (chunk: string) => void,
   onComplete: () => void,
   onError: (error: Error) => void,
+  onUserMessageId?: (userMessageId: number) => void,
   signal?: AbortSignal,
 ): Promise<void> => {
   let token = useAuthStore.getState().accessToken
@@ -165,7 +166,8 @@ export const sendMessage = async (
 
               if (data.type === 'user_message_id' && data.user_message_id) {
                 console.log('Received user message id:', data.user_message_id)
-                // 可以通过回调通知调用者更新消息ID
+                // 通知调用者更新消息ID
+                onUserMessageId?.(data.user_message_id)
               } else if (data.type === 'ai_chunk' && data.content) {
                 console.log('Emitting chunk:', data.content)
                 onChunk(data.content)

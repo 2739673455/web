@@ -37,6 +37,71 @@ function base64ToBlob(base64: string, mimeType = 'image/jpeg'): Blob {
   return new Blob(byteArrays, { type: mimeType })
 }
 
+// 将消息中的 base64 图片转换为 COS URL
+async function convertImagesToCos(messages: any[], conversationId: number) {
+  const convertedMessages: any[] = []
+  
+  for (const message of messages) {
+    if (Array.isArray(message.content)) {
+      const items: any[] = []
+      let hasImage = false
+      
+      for (const item of message.content) {
+        if (item.type === 'image_url' && typeof item.image_url === 'string' && item.image_url.startsWith('data:')) {
+          // base64 图片，需要上传到 COS
+          hasImage = true
+          // 提取文件类型
+          const match = item.image_url.match(/data:image\/(\w+);/)
+          const mimeType = match ? `image/${match[1]}` : 'image/jpeg'
+          const suffix = match ? match[1] : 'jpg'
+          
+          try {
+            // 获取预签名上传 URL
+            const uploadUrls = await getUploadPresignedUrl({ conversation_id: conversationId, suffixes: [suffix] })
+            const uploadUrl = uploadUrls[0]
+            const cosUrl = uploadUrl.split('?')[0]
+            
+            // 上传图片
+            const base64Data = item.image_url.split(',')[1]
+            const blob = base64ToBlob(base64Data, mimeType)
+            
+            await fetch(uploadUrl, {
+              method: 'PUT',
+              body: blob,
+              headers: {
+                'Content-Type': blob.type,
+              },
+            })
+            
+            items.push({ type: 'image_url', image_url: cosUrl })
+          } catch (error) {
+            console.error('Failed to upload image:', error)
+            // 上传失败，保留原始图片 URL
+            items.push(item)
+          }
+        } else {
+          items.push(item)
+        }
+      }
+      
+      if (hasImage) {
+        convertedMessages.push({
+          ...message,
+          content: items,
+        })
+        console.log('[convertImagesToCos] Converted message with image, message_id:', message.message_id)
+      } else {
+        convertedMessages.push(message)
+        console.log('[convertImagesToCos] Kept original message, message_id:', message.message_id)
+      }
+    } else {
+      convertedMessages.push(message)
+    }
+  }
+  
+  return convertedMessages
+}
+
 export default function ChatInput({ onShowLogin }: ChatInputProps) {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -218,6 +283,7 @@ export default function ChatInput({ onShowLogin }: ChatInputProps) {
       }
 
       const messagesWithoutTimestamp = messages.map((m) => ({
+        message_id: m.message_id,
         role: m.role,
         content: m.content,
       }))
@@ -257,6 +323,20 @@ export default function ChatInput({ onShowLogin }: ChatInputProps) {
                 setLoading(false)
                 setIsAborting(false)
                 abortControllerRef.current = null
+              },
+              (userMessageId) => {
+                console.log('[handleSend] Received user_message_id:', userMessageId)
+                // 更新最后一条用户消息的 message_id
+                setMessages(prevMessages => {
+                  const updatedMessages = [...prevMessages]
+                  if (updatedMessages.length > 0) {
+                    updatedMessages[updatedMessages.length - 1] = {
+                      ...updatedMessages[updatedMessages.length - 1],
+                      message_id: userMessageId,
+                    }
+                  }
+                  return updatedMessages
+                })
               },
               abortControllerRef.current.signal
             ),
@@ -320,6 +400,20 @@ export default function ChatInput({ onShowLogin }: ChatInputProps) {
                 setLoading(false)
                 setIsAborting(false)
                 abortControllerRef.current = null
+              },
+              (userMessageId) => {
+                console.log('[handleSend] Received user_message_id (existing conversation):', userMessageId)
+                // 更新最后一条用户消息的 message_id
+                setMessages(prevMessages => {
+                  const updatedMessages = [...prevMessages]
+                  if (updatedMessages.length > 0) {
+                    updatedMessages[updatedMessages.length - 1] = {
+                      ...updatedMessages[updatedMessages.length - 1],
+                      message_id: userMessageId,
+                    }
+                  }
+                  return updatedMessages
+                })
               },
               abortControllerRef.current.signal
             )
@@ -405,11 +499,8 @@ export default function ChatInput({ onShowLogin }: ChatInputProps) {
   // Handle retry when error button is clicked
   useEffect(() => {
     const handleRetry = () => {
-      if (hasError === false && lastSentMessage) {
-        setMessage(lastSentMessage)
-        setLastSentMessage('')
-        handleSend()
-      }
+      // 直接使用消息列表重试
+      retryCurrentConversation()
     }
 
     window.addEventListener('retryMessage', handleRetry)
@@ -417,7 +508,105 @@ export default function ChatInput({ onShowLogin }: ChatInputProps) {
     return () => {
       window.removeEventListener('retryMessage', handleRetry)
     }
-  }, [hasError, lastSentMessage])
+  }, [])
+
+  // 重试当前对话
+  const retryCurrentConversation = async () => {
+    // 从 store 获取最新值
+    const currentConversationId = useConversationStore.getState().currentConversationId
+    const accessToken = useAuthStore.getState().accessToken
+    const selectedConfigId = useModelConfigStore.getState().selectedConfigId
+    const configs = useModelConfigStore.getState().configs
+    const messages = useChatStore.getState().messages
+
+    if (!currentConversationId || !accessToken) return
+
+    setLoading(true)
+    setIsAborting(false)
+    setHasError(false)
+    setLastSentMessage('')
+
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController()
+
+    try {
+      const currentConfig = configs.find((c) => c.config_id === selectedConfigId) || configs[0]
+
+      // 获取消息列表，排除最后一条失败的 AI 消息
+      // 检查最后一条消息的角色，只有当是 assistant 时才移除
+      let messagesWithoutLastAI = [...messages]
+      if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
+        messagesWithoutLastAI = messages.slice(0, -1)
+      }
+
+      // 过滤掉没有 message_id 的用户消息（这些是发送失败后重复添加的）
+      messagesWithoutLastAI = messagesWithoutLastAI.filter(m => m.message_id !== undefined)
+
+      // 更新消息列表，移除无效消息
+      setMessages(messagesWithoutLastAI)
+
+      // 将消息中的 base64 图片转换为 COS URL
+      const messagesWithCosUrls = await convertImagesToCos(messagesWithoutLastAI, currentConversationId)
+
+      const messagesWithoutTimestamp = messagesWithCosUrls.map((m) => ({
+        message_id: m.message_id,
+        role: m.role,
+        content: m.content,
+      }))
+
+      // 重新发送消息
+      await sendMessage(
+        {
+          conversation_id: currentConversationId,
+          messages: messagesWithoutTimestamp,
+          base_url: currentConfig.base_url || '',
+          model_name: currentConfig.model_name,
+          api_key: currentConfig.api_key ?? null,
+          params: null,
+        },
+        (chunk) => {
+          console.log('Received chunk:', chunk)
+          appendToAssistantMessage(chunk)
+        },
+        () => {
+          completeCurrentAssistantMessage()
+          setLoading(false)
+          setIsAborting(false)
+          abortControllerRef.current = null
+        },
+        (error) => {
+          console.error('Failed to retry message:', error)
+          if (error.name !== 'AbortError') {
+            setHasError(true)
+            showToast(error.message || '重试失败', 'error', 5000)
+          }
+          setLoading(false)
+          setIsAborting(false)
+          abortControllerRef.current = null
+        },
+        (userMessageId) => {
+          console.log('[retryCurrentConversation] Received user_message_id:', userMessageId)
+          // 更新最后一条用户消息的 message_id
+          setMessages(prevMessages => {
+            const updatedMessages = [...prevMessages]
+            if (updatedMessages.length > 0) {
+              updatedMessages[updatedMessages.length - 1] = {
+                ...updatedMessages[updatedMessages.length - 1],
+                message_id: userMessageId,
+              }
+            }
+            return updatedMessages
+          })
+        },
+        abortControllerRef.current.signal
+      )
+    } catch (err: any) {
+      console.error('Failed to retry:', err)
+      showToast(err.message || '重试失败', 'error', 5000)
+      setLoading(false)
+      setIsAborting(false)
+    }
+  }
 
   const handleAbort = () => {
     if (abortControllerRef.current) {

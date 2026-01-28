@@ -34,7 +34,7 @@ export default function MessageList() {
     const fromNullToValue = previousConversationId.current === null && currentConversationId !== null
 
     // 消息为空说明还没加载过
-    const needsLoading = messages.length === 0
+    const needsLoading = Array.isArray(messages) && messages.length === 0
 
     // 在以下情况加载消息：
     // 1. 有选中的对话ID
@@ -46,7 +46,7 @@ export default function MessageList() {
       loadMessages()
       previousConversationId.current = currentConversationId
     }
-  }, [currentConversationId, isNewConversation, isAuthenticated, messages.length])
+  }, [currentConversationId, isNewConversation, isAuthenticated, Array.isArray(messages) ? messages.length : 0])
 
   useEffect(() => {
     scrollToBottom()
@@ -55,7 +55,8 @@ export default function MessageList() {
   const loadMessages = async () => {
     try {
       const data = await getMessages(currentConversationId!)
-      useChatStore.getState().setMessages(data)
+      // 确保 data 是数组
+      useChatStore.getState().setMessages(Array.isArray(data) ? data : [])
       // 延迟滚动，确保图片和其他资源已加载
       setTimeout(() => {
         scrollToBottom()
@@ -200,7 +201,7 @@ export default function MessageList() {
       ref={messagesContainerRef}
       className="flex-1 overflow-y-auto p-6 space-y-6 relative"
     >
-      {!currentConversationId && !isNewConversation && messages.length === 0 && !currentAssistantMessage && (
+      {!currentConversationId && !isNewConversation && Array.isArray(messages) && messages.length === 0 && !currentAssistantMessage && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-2">Chat</h2>
@@ -209,7 +210,7 @@ export default function MessageList() {
         </div>
       )}
 
-      {isNewConversation && messages.length === 0 && !currentAssistantMessage && (
+      {isNewConversation && Array.isArray(messages) && messages.length === 0 && !currentAssistantMessage && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-2">New Chat</h2>
@@ -218,7 +219,7 @@ export default function MessageList() {
         </div>
       )}
 
-      {messages.map((message, index) => {
+      {Array.isArray(messages) && messages.map((message, index) => {
         const hasImage = Array.isArray(message.content) && message.content.some(item => item.type === 'image_url')
         const isLastUserMessage = message.role === 'user' && index === messages.length - 1
         const showRetryButton = isLastUserMessage && hasError
@@ -237,13 +238,15 @@ export default function MessageList() {
               {showRetryButton && (
                 <button
                   onClick={() => {
-                    setHasError(false)
                     window.dispatchEvent(new CustomEvent('retryMessage'))
                   }}
-                  className="py-1 px-2 text-xs border-0 text-red-700 hover:bg-red-700 hover:text-white transition-colors"
+                  className="w-6 h-6 flex items-center justify-center text-red-700 cursor-pointer no-hover"
                   title="重试"
+                  style={{ flexShrink: 0 }}
                 >
-                  重试
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                 </button>
               )}
               <div

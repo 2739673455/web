@@ -27,7 +27,7 @@ export const useChatStore = create<ChatState>((set) => ({
   currentAssistantMessage: '',
   hasError: false,
   errorMessage: '',
-  setMessages: (messages) => set({ messages }),
+  setMessages: (messages) => set({ messages: Array.isArray(messages) ? messages : [] }),
   addMessage: (message) =>
     set((state) => ({
       messages: [...state.messages, message],

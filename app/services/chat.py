@@ -113,20 +113,25 @@ async def stream_response(
 ):
     """流式返回AI回复"""
     try:
+        app_logger.info(f"Received messages ({len(messages)})")
         # 转换图片url为cos_url
         await image_url_to_cos_url(messages)
         # 用户消息存入数据库
-        user_message = await save_message_in_db(
-            db_session, messages[-1], user_id, conversation_id
-        )
+        user_message_id = messages[-1].message_id  # 如果有消息id，说明已经存过数据库了
+        if not user_message_id:
+            user_message = await save_message_in_db(
+                db_session, messages[-1], user_id, conversation_id
+            )
+            user_message_id = user_message.id
         # 转换cos_url为预签名下载url
         await image_url_to_get_presigned_url(messages)
 
         # 返回用户消息id
         yield (
-            json.dumps({"type": "user_message_id", "user_message_id": user_message.id})
+            json.dumps({"type": "user_message_id", "user_message_id": user_message_id})
             + "\n"
         )
+        app_logger.info(f"User message id: {user_message_id}")
 
         # 流式调用模型
         chunks: list[str] = []
@@ -149,6 +154,7 @@ async def stream_response(
 
         # 发送完成信号，返回AI消息id
         yield (json.dumps({"type": "complete", "ai_message_id": ai_message.id}) + "\n")
+        app_logger.info(f"AI message id: {ai_message.id}")
 
     except (
         OpenAINotFoundError,
