@@ -5,10 +5,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config.config import CFG
-from app.dependencies.database import db_manager
 from app.handlers import register_exception_handlers
 from app.middleware import log_middleware
 from app.routers.api import api
+from app.services.database import db_manager
 from app.utils.log import setup_logger
 
 

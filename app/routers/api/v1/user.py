@@ -3,11 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.auth import (
-    authenticate_access_token,
-    authenticate_refresh_token,
-)
-from app.dependencies.database import get_auth_db
+from app.entities.auth import Group
 from app.schemas.user import (
     AccessTokenPayload,
     LoginRequest,
@@ -20,17 +16,22 @@ from app.schemas.user import (
     UserResponse,
 )
 from app.services.auth import (
+    authenticate_access_token,
+    authenticate_refresh_token,
     create_token,
     refresh_token,
     revoke_all_refresh_tokens,
     revoke_refresh_token,
 )
+from app.services.database import get_auth_db
 from app.services.user import (
+    add_user_in_db,
+    get_default_group,
     get_user,
-    register,
     update_email,
     update_password,
     update_username,
+    verify_email_exists,
 )
 from app.utils.context import user_id_ctx
 from app.utils.log import auth_logger
@@ -38,18 +39,25 @@ from app.utils.log import auth_logger
 router = APIRouter(prefix="/user", tags=["用户管理"])
 
 
-@router.post("/register", response_model=LoginResponse)
+@router.post(
+    "/register",
+    response_model=LoginResponse,
+    dependencies=[Depends(verify_email_exists)],
+)
 async def api_register(
     request: RegisterRequest,
     db_session: Annotated[AsyncSession, Depends(get_auth_db)],
+    groups: Annotated[list[Group], Depends(get_default_group)],
     response: Response,
 ) -> LoginResponse:
     """注册新用户"""
-    await register(db_session, request.email, request.username, request.password)
+    # 将用户加入数据库
+    await add_user_in_db(
+        db_session, request.email, request.username, request.password, groups
+    )
+    # 创建访问令牌和刷新令牌
     result = await create_token(db_session, request.email, request.password)
-    user_id_ctx.set(str(result["user_id"]))  # 设置 user_id 到 ContextVar
-    auth_logger.info("User register")
-    # 设置 refresh_token cookie
+    # 在 cookie 中设置 refresh_token
     response.set_cookie(
         key="refresh_token",
         value=result["refresh_token"],
@@ -57,6 +65,9 @@ async def api_register(
         secure=False,
         samesite="lax",
     )
+    # 设置 user_id 到 ContextVar
+    user_id_ctx.set(str(result["user_id"]))
+    auth_logger.info("User register")
     return LoginResponse(**result)
 
 
@@ -67,10 +78,9 @@ async def api_login(
     response: Response,
 ) -> LoginResponse:
     """用户登录"""
+    # 创建访问令牌和刷新令牌
     result = await create_token(db_session, request.email, request.password)
-    user_id_ctx.set(str(result["user_id"]))  # 设置 user_id 到 ContextVar
-    auth_logger.info("User login")
-    # 设置 refresh_token cookie
+    # 在 cookie 中设置 refresh_token
     response.set_cookie(
         key="refresh_token",
         value=result["refresh_token"],
@@ -78,6 +88,9 @@ async def api_login(
         secure=False,
         samesite="lax",
     )
+    # 设置 user_id 到 ContextVar
+    user_id_ctx.set(str(result["user_id"]))
+    auth_logger.info("User login")
     return LoginResponse(**result)
 
 

@@ -6,8 +6,6 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.auth import authenticate_access_token
-from app.dependencies.database import get_app_db
 from app.schemas.chat import (
     GetUploadPresignedUrlRequest,
     GetUploadPresignedUrlResponse,
@@ -17,11 +15,13 @@ from app.schemas.chat import (
     WebSocketChatRequest,
 )
 from app.schemas.user import AccessTokenPayload
+from app.services.auth import authenticate_access_token
 from app.services.chat import (
     get_messages,
     image_url_to_get_presigned_url,
     stream_response,
 )
+from app.services.database import get_app_db
 from app.utils.cos import generate_image_cos_key, get_upload_presigned_url
 from app.utils.log import app_logger
 

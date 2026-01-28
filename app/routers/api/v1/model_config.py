@@ -3,8 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.auth import authenticate_access_token
-from app.dependencies.database import get_app_db
 from app.schemas.model_config import (
     CanCreateModelConfigRequest,
     CanCreateModelConfigResponse,
@@ -15,6 +13,8 @@ from app.schemas.model_config import (
     UpdateModelConfigRequest,
 )
 from app.schemas.user import AccessTokenPayload
+from app.services.auth import authenticate_access_token
+from app.services.database import get_app_db
 from app.services.model_config import (
     create_model_config,
     delete_model_configs,

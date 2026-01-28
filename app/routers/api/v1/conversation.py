@@ -3,8 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.auth import authenticate_access_token
-from app.dependencies.database import get_app_db
 from app.schemas.chat import SendMessageRequest
 from app.schemas.conversation import (
     ConversationListResponse,
@@ -14,6 +12,7 @@ from app.schemas.conversation import (
     UpdateConversationRequest,
 )
 from app.schemas.user import AccessTokenPayload
+from app.services.auth import authenticate_access_token
 from app.services.chat import image_url_to_get_presigned_url
 from app.services.conversation import (
     create_conversation,
@@ -23,6 +22,7 @@ from app.services.conversation import (
     update_conversation_model_config,
     update_conversation_title,
 )
+from app.services.database import get_app_db
 from app.utils.log import app_logger
 
 router = APIRouter(prefix="/conversation", tags=["对话管理"])

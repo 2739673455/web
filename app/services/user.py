@@ -15,32 +15,41 @@ from app.exceptions.user import (
 password_hash = PasswordHash.recommended()
 
 
-async def register(
-    db_session: AsyncSession, email: str, username: str, password: str
-) -> None:
-    """注册新用户"""
-    # 检查邮箱是否已存在
+async def verify_email_exists(db_session: AsyncSession, email: str) -> None:
+    """验证邮箱是否已存在"""
     stmt = select(User).where(User.email == email)
     result = await db_session.execute(stmt)
     if result.scalar_one_or_none():
         raise EmailAlreadyExistsError
 
-    # 查找组 1
-    group_stmt = select(Group).where(Group.id == 1)
-    result = await db_session.execute(group_stmt)
-    group = result.scalar_one_or_none()
 
-    # 创建用户
-    user = User(
-        email=email,
-        name=username,
-        password_hash=password_hash.hash(password),
-        group=[group],  # 默认加入组 1
-    )
+async def get_default_group(db_session: AsyncSession) -> Group | None:
+    """获取默认组"""
+    stmt = select(Group).where(Group.id == 1, Group.yn == 1)
+    result = await db_session.execute(stmt)
+    return result.scalar_one_or_none()
 
-    db_session.add(user)
+
+async def add_user_in_db(
+    db_session: AsyncSession,
+    email: str,
+    username: str,
+    password: str,
+    groups: list[Group],
+) -> User:
+    """将用户加入数据库"""
     try:
+        # 创建用户
+        user = User(
+            email=email,
+            name=username,
+            password_hash=password_hash.hash(password),
+            group=groups,
+        )
+        # 添加用户
+        db_session.add(user)
         await db_session.commit()
+        return user
     except Exception:
         await db_session.rollback()
         raise
