@@ -21,8 +21,3 @@ dependencies = [
     "sqlacodegen>=3.2.0",
     "sqlalchemy>=2.0.45",
 ]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
-asyncio_mode = "auto"

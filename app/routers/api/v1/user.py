@@ -119,11 +119,29 @@ async def api_update_username(
 async def api_update_email(
     request: UpdateEmailRequest,
     db_session: Annotated[AsyncSession, Depends(get_auth_db)],
-    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
+    payload: Annotated[RefreshTokenPayload, Depends(authenticate_refresh_token)],
+    response: Response,
 ):
     """修改邮箱"""
     auth_logger.info("User update email")
+    # 修改邮箱
     await update_email(db_session, payload.sub, request.email)
+    # 撤销该用户的所有历史刷新令牌
+    await revoke_all_refresh_tokens(db_session, payload.sub)
+    auth_logger.info(f"User {payload.sub} password updated, all refresh tokens revoked")
+    # 生成新的访问令牌和刷新令牌
+    tokens = await refresh_token(db_session, payload, [])
+    # 设置新的 refresh_token cookie
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens["refresh_token"],
+        httponly=True,
+        secure=False,
+        samesite="lax",
+    )
+    return LoginResponse(
+        **tokens
+    )  # TODO 后端修改邮箱改为使用刷新令牌，返回刷新令牌和访问令牌
 
 
 @router.post("/me/password", response_model=LoginResponse)
@@ -135,19 +153,13 @@ async def api_update_password(
 ) -> LoginResponse:
     """修改密码"""
     auth_logger.info("User update password")
-    user_id = payload.sub
-
     # 验证并修改密码
-    await update_password(db_session, user_id, request.password)
-
+    await update_password(db_session, payload.sub, request.password)
     # 撤销该用户的所有历史刷新令牌
-    await revoke_all_refresh_tokens(db_session, user_id)
-
-    auth_logger.info(f"User {user_id} password updated, all refresh tokens revoked")
-
+    await revoke_all_refresh_tokens(db_session, payload.sub)
+    auth_logger.info(f"User {payload.sub} password updated, all refresh tokens revoked")
     # 生成新的访问令牌和刷新令牌
     tokens = await refresh_token(db_session, payload, [])
-
     # 设置新的 refresh_token cookie
     response.set_cookie(
         key="refresh_token",
@@ -155,9 +167,7 @@ async def api_update_password(
         httponly=True,
         secure=False,
         samesite="lax",
-        max_age=60 * 60 * 24 * 7,  # 7天
     )
-
     return LoginResponse(**tokens)
 
 

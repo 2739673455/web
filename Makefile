@@ -11,6 +11,6 @@ init_db:
 app:
 	uv run -m app.main
 test:
-	uv run pytest
+	uv run pytest tests/
 fd:
 	cd fd && pnpm dev

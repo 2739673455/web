@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+# 将项目根目录添加到 sys.path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
