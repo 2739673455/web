@@ -60,7 +60,8 @@ export default function ProfilePage() {
         await updateUsername({ username: editValue })
         setSuccess('用户名更新成功')
       } else if (editingField === 'email') {
-        await updateEmail({ email: editValue })
+        const data = await updateEmail({ email: editValue })
+        setTokens(data.access_token, data.refresh_token)
         setSuccess('邮箱更新成功')
       } else if (editingField === 'password') {
         if (editValue !== confirmPassword) {

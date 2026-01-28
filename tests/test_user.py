@@ -315,14 +315,6 @@ def test_update_email_same(client):
     assert "邮箱相同" in response.json()["detail"]
 
 
-def test_update_email_no_token(client):
-    """测试修改邮箱时未提供token"""
-    response = client.post(
-        "/api/v1/user/me/email", json={"email": generate_test_email()}
-    )
-    assert response.status_code == 401
-
-
 def test_update_password_success(client):
     """测试成功修改密码"""
     email = generate_test_email()

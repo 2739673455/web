@@ -6,6 +6,18 @@ import { getMessages } from '../services/chat'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
+// 配置 marked.js，禁用段落标签
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+})
+
+// 自定义渲染器，禁用段落标签
+const renderer = new marked.Renderer()
+renderer.paragraph = (text) => text
+
+marked.setOptions({ renderer })
+
 export default function MessageList() {
   const { messages, currentAssistantMessage, hasError, setHasError } = useChatStore()
   const { currentConversationId, isNewConversation } = useConversationStore()
@@ -128,6 +140,22 @@ export default function MessageList() {
 
   const renderText = (content: string | Record<string, unknown>[]) => {
     if (!Array.isArray(content)) {
+      // 检查是否包含 markdown 语法
+      const hasMarkdown = content && (
+        content.includes('**') ||
+        content.includes('*') ||
+        content.includes('`') ||
+        content.includes('[') ||
+        content.includes('#') ||
+        content.includes('\n')
+      )
+      
+      if (!hasMarkdown) {
+        // 纯文本，直接显示
+        return <span>{content}</span>
+      }
+      
+      // 包含 markdown，使用 marked.parse
       const html = marked.parse(content || '') as string
       return (
         <div
@@ -139,6 +167,21 @@ export default function MessageList() {
     return content.map((item, index) => {
       if (item.type === 'text') {
         const text = item.text as string || ''
+        const hasMarkdown = text && (
+          text.includes('**') ||
+          text.includes('*') ||
+          text.includes('`') ||
+          text.includes('[') ||
+          text.includes('#') ||
+          text.includes('\n')
+        )
+        
+        if (!hasMarkdown) {
+          // 纯文本，直接显示
+          return <span key={index}>{text}</span>
+        }
+        
+        // 包含 markdown，使用 marked.parse
         const html = marked.parse(text) as string
         return (
           <div
@@ -177,6 +220,9 @@ export default function MessageList() {
 
       {messages.map((message, index) => {
         const hasImage = Array.isArray(message.content) && message.content.some(item => item.type === 'image_url')
+        const isLastUserMessage = message.role === 'user' && index === messages.length - 1
+        const showRetryButton = isLastUserMessage && hasError
+
         return (
           <div
             key={index}
@@ -187,15 +233,29 @@ export default function MessageList() {
                 {renderImages(message.content)}
               </div>
             )}
-            <div
-              className={`max-w-[80%] p-2 m-0 inline-block message-content ${
-                message.role === 'user'
-                  ? 'bg-mono-800 rounded-lg'
-                  : ''
-              }`}
-              style={{ lineHeight: '1.2', margin: '0', color: message.role === 'user' ? 'var(--color-bg)' : undefined }}
-            >
-              {renderText(message.content)}
+            <div className="flex items-end gap-2">
+              {showRetryButton && (
+                <button
+                  onClick={() => {
+                    setHasError(false)
+                    window.dispatchEvent(new CustomEvent('retryMessage'))
+                  }}
+                  className="py-1 px-2 text-xs border-0 text-red-700 hover:bg-red-700 hover:text-white transition-colors"
+                  title="重试"
+                >
+                  重试
+                </button>
+              )}
+              <div
+                className={`${
+                  message.role === 'user'
+                    ? 'bg-mono-800 rounded-lg px-2 py-1'
+                    : ''
+                }`}
+                style={{ lineHeight: '1.5', margin: '0', color: message.role === 'user' ? 'var(--color-bg)' : undefined, display: 'inline-block' }}
+              >
+                {renderText(message.content)}
+              </div>
             </div>
           </div>
         )
@@ -204,24 +264,10 @@ export default function MessageList() {
       {currentAssistantMessage && (
         <div className="flex flex-col items-start">
           <div
-            className="max-w-[80%] p-2 m-0 inline-block message-content whitespace-pre-wrap"
-            style={{ lineHeight: '1.2', margin: '0' }}
-          >
-            {currentAssistantMessage}
-          </div>
-          {hasError && (
-            <div className="flex items-center gap-2 mt-1">
-              <button
-                onClick={() => {
-                  setHasError(false)
-                  window.dispatchEvent(new CustomEvent('retryMessage'))
-                }}
-                className="text-xs py-0.5 px-2 border-0 hover:bg-[var(--color-text)] hover:text-[var(--color-bg)] transition-colors"
-              >
-                重试
-              </button>
-            </div>
-          )}
+            className="markdown-content"
+            style={{ lineHeight: '1.5', margin: '0', display: 'inline-block' }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(currentAssistantMessage) as string) }}
+          />
         </div>
       )}
 

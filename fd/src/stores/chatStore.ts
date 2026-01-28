@@ -7,6 +7,7 @@ interface ChatState {
   isAborting: boolean
   currentAssistantMessage: string
   hasError: boolean
+  errorMessage: string
   setMessages: (messages: Message[]) => void
   addMessage: (message: Message) => void
   appendToAssistantMessage: (content: string) => void
@@ -14,6 +15,7 @@ interface ChatState {
   setIsSending: (isSending: boolean) => void
   setIsAborting: (isAborting: boolean) => void
   setHasError: (hasError: boolean) => void
+  setErrorMessage: (errorMessage: string) => void
   resetCurrentAssistantMessage: () => void
   clearMessages: () => void
 }
@@ -24,6 +26,7 @@ export const useChatStore = create<ChatState>((set) => ({
   isAborting: false,
   currentAssistantMessage: '',
   hasError: false,
+  errorMessage: '',
   setMessages: (messages) => set({ messages }),
   addMessage: (message) =>
     set((state) => ({
@@ -33,6 +36,7 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       currentAssistantMessage: state.currentAssistantMessage + content,
       hasError: false,
+      errorMessage: '',
     })),
   completeCurrentAssistantMessage: () =>
     set((state) => {
@@ -46,6 +50,7 @@ export const useChatStore = create<ChatState>((set) => ({
           messages: [...state.messages, newMessage],
           currentAssistantMessage: '',
           hasError: false,
+          errorMessage: '',
         }
       }
       return state
@@ -53,6 +58,7 @@ export const useChatStore = create<ChatState>((set) => ({
   setIsSending: (isSending) => set({ isSending }),
   setIsAborting: (isAborting) => set({ isAborting }),
   setHasError: (hasError) => set({ hasError }),
-  resetCurrentAssistantMessage: () => set({ currentAssistantMessage: '', hasError: false }),
-  clearMessages: () => set({ messages: [], currentAssistantMessage: '', hasError: false }),
+  setErrorMessage: (errorMessage) => set({ errorMessage }),
+  resetCurrentAssistantMessage: () => set({ currentAssistantMessage: '', hasError: false, errorMessage: '' }),
+  clearMessages: () => set({ messages: [], currentAssistantMessage: '', hasError: false, errorMessage: '' }),
 }))

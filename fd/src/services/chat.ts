@@ -162,7 +162,7 @@ export const sendMessage = async (
             try {
               const data = JSON.parse(line)
               console.log('Parsed data:', data)
-              
+
               if (data.type === 'user_message_id' && data.user_message_id) {
                 console.log('Received user message id:', data.user_message_id)
                 // 可以通过回调通知调用者更新消息ID
@@ -172,6 +172,10 @@ export const sendMessage = async (
               } else if (data.type === 'complete') {
                 console.log('Received complete signal, ai_message_id:', data.ai_message_id)
                 onComplete()
+                return
+              } else if (data.type === 'error') {
+                console.error('Received error from server:', data.detail)
+                onError(new Error(data.detail || 'Server error'))
                 return
               }
             } catch (e) {

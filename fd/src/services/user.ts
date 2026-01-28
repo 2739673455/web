@@ -61,8 +61,9 @@ export const updateUsername = async (data: UpdateUsernameRequest): Promise<void>
 }
 
 // Update email
-export const updateEmail = async (data: UpdateEmailRequest): Promise<void> => {
-  await api.post('/api/v1/user/me/email', data)
+export const updateEmail = async (data: UpdateEmailRequest): Promise<TokenResponse> => {
+  const response = await api.post<TokenResponse>('/api/v1/user/me/email', data)
+  return response.data
 }
 
 // Update password

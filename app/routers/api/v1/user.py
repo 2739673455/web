@@ -128,7 +128,7 @@ async def api_update_email(
     await update_email(db_session, payload.sub, request.email)
     # 撤销该用户的所有历史刷新令牌
     await revoke_all_refresh_tokens(db_session, payload.sub)
-    auth_logger.info(f"User {payload.sub} password updated, all refresh tokens revoked")
+    auth_logger.info(f"User {payload.sub} email updated, all refresh tokens revoked")
     # 生成新的访问令牌和刷新令牌
     tokens = await refresh_token(db_session, payload, [])
     # 设置新的 refresh_token cookie
@@ -139,9 +139,7 @@ async def api_update_email(
         secure=False,
         samesite="lax",
     )
-    return LoginResponse(
-        **tokens
-    )  # TODO 后端修改邮箱改为使用刷新令牌，返回刷新令牌和访问令牌
+    return LoginResponse(**tokens)
 
 
 @router.post("/me/password", response_model=LoginResponse)

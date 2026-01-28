@@ -32,6 +32,13 @@ body {
   color: var(--color-text);
 }
 
+/* Prevent unnatural line breaks for Chinese text */
+.message-content,
+.markdown-content {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
 /* Mono border style */
 .border-mono {
   border: 1px solid #666;
@@ -39,7 +46,7 @@ body {
 
 /* Markdown content styles */
 .markdown-content {
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 /* Remove bottom margin from last element in message content */
@@ -60,7 +67,7 @@ body {
 }
 
 .markdown-content p {
-  margin-bottom: 0.25em;
+  margin-bottom: 0;
 }
 
 .markdown-content ul,

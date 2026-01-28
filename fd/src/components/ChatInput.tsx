@@ -9,6 +9,9 @@ import { createConversation, updateConversation, generateTitle } from '../servic
 import { deleteModelConfigs } from '../services/modelConfig'
 import { showToast } from './Toast'
 
+// 全局错误消息，用于重试
+let lastErrorMessage = ''
+
 interface ChatInputProps {
   onShowLogin: () => void
 }
@@ -46,7 +49,7 @@ export default function ChatInput({ onShowLogin }: ChatInputProps) {
   const configPopupRef = useRef<HTMLDivElement>(null)
   const configButtonContainerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const { messages, setMessages, appendToAssistantMessage, completeCurrentAssistantMessage, resetCurrentAssistantMessage, hasError, setHasError } = useChatStore()
+  const { messages, setMessages, appendToAssistantMessage, completeCurrentAssistantMessage, resetCurrentAssistantMessage, hasError, setHasError, setErrorMessage } = useChatStore()
   const { currentConversationId, setCurrentConversationId, setIsNewConversation } = useConversationStore()
   const { selectedConfigId, configs, setSelectedConfigId } = useModelConfigStore()
   const { accessToken } = useAuthStore()
@@ -247,6 +250,9 @@ export default function ChatInput({ onShowLogin }: ChatInputProps) {
                 console.error('Failed to send message:', error)
                 if (error.name !== 'AbortError') {
                   setHasError(true)
+                  setErrorMessage(error.message || '发送消息失败')
+                  lastErrorMessage = error.message || '发送消息失败'
+                  showToast(error.message || '发送消息失败', 'error', 5000)
                 }
                 setLoading(false)
                 setIsAborting(false)
@@ -307,6 +313,9 @@ export default function ChatInput({ onShowLogin }: ChatInputProps) {
                 console.error('Failed to send message:', error)
                 if (error.name !== 'AbortError') {
                   setHasError(true)
+                  setErrorMessage(error.message || '发送消息失败')
+                  lastErrorMessage = error.message || '发送消息失败'
+                  showToast(error.message || '发送消息失败', 'error', 5000)
                 }
                 setLoading(false)
                 setIsAborting(false)

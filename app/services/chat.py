@@ -2,6 +2,24 @@ import asyncio
 import json
 from collections.abc import Sequence
 
+from openai import (
+    APIError as OpenAIError,
+)
+from openai import (
+    AuthenticationError as OpenAIAuthenticationError,
+)
+from openai import (
+    BadRequestError as OpenAIBadRequestError,
+)
+from openai import (
+    InternalServerError as OpenAIInternalError,
+)
+from openai import (
+    NotFoundError as OpenAINotFoundError,
+)
+from openai import (
+    RateLimitError as OpenAIRateLimitError,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -94,37 +112,54 @@ async def stream_response(
     db_session: AsyncSession,
 ):
     """流式返回AI回复"""
-    # 转换图片url为cos_url
-    await image_url_to_cos_url(messages)
-    # 用户消息存入数据库
-    user_message = await save_message_in_db(
-        db_session, messages[-1], user_id, conversation_id
-    )
-    # 转换cos_url为预签名下载url
-    await image_url_to_get_presigned_url(messages)
+    try:
+        # 转换图片url为cos_url
+        await image_url_to_cos_url(messages)
+        # 用户消息存入数据库
+        user_message = await save_message_in_db(
+            db_session, messages[-1], user_id, conversation_id
+        )
+        # 转换cos_url为预签名下载url
+        await image_url_to_get_presigned_url(messages)
 
-    # 返回用户消息id
-    yield (
-        json.dumps({"type": "user_message_id", "user_message_id": user_message.id})
-        + "\n"
-    )
-
-    # 流式调用模型
-    chunks: list[str] = []
-    async for chunk in stream_model(messages, base_url, model_name, api_key, params):
-        chunks.append(chunk)
+        # 返回用户消息id
         yield (
-            json.dumps({"type": "ai_chunk", "content": chunk}, ensure_ascii=False)
+            json.dumps({"type": "user_message_id", "user_message_id": user_message.id})
             + "\n"
         )
 
-    # AI回复存入数据库
-    ai_message = await save_message_in_db(
-        db_session,
-        MessageItem(role="assistant", content="".join(chunks)),
-        user_id,
-        conversation_id,
-    )
+        # 流式调用模型
+        chunks: list[str] = []
+        async for chunk in stream_model(
+            messages, base_url, model_name, api_key, params
+        ):
+            chunks.append(chunk)
+            yield (
+                json.dumps({"type": "ai_chunk", "content": chunk}, ensure_ascii=False)
+                + "\n"
+            )
 
-    # 发送完成信号，返回AI消息id
-    yield (json.dumps({"type": "complete", "ai_message_id": ai_message.id}) + "\n")
+        # AI回复存入数据库
+        ai_message = await save_message_in_db(
+            db_session,
+            MessageItem(role="assistant", content="".join(chunks)),
+            user_id,
+            conversation_id,
+        )
+
+        # 发送完成信号，返回AI消息id
+        yield (json.dumps({"type": "complete", "ai_message_id": ai_message.id}) + "\n")
+
+    except (
+        OpenAINotFoundError,
+        OpenAIBadRequestError,
+        OpenAIAuthenticationError,
+        OpenAIRateLimitError,
+        OpenAIInternalError,
+        OpenAIError,
+    ) as e:
+        app_logger.error(f"OpenAI API error: {e}")
+        yield json.dumps({"type": "error", "detail": str(e)}, ensure_ascii=False) + "\n"
+    except Exception as e:
+        app_logger.error(f"Unexpected error in stream_response: {e}")
+        yield json.dumps({"type": "error", "detail": str(e)}, ensure_ascii=False) + "\n"
