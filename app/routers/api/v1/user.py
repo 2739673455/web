@@ -19,7 +19,6 @@ from app.services.auth import (
     authenticate_access_token,
     authenticate_refresh_token,
     create_token,
-    refresh_token,
     revoke_all_refresh_tokens,
     revoke_refresh_token,
 )
@@ -28,6 +27,7 @@ from app.services.user import (
     add_user_in_db,
     get_default_group,
     get_user,
+    login_by_user_id,
     update_email,
     update_password,
     update_username,
@@ -52,23 +52,15 @@ async def api_register(
 ) -> LoginResponse:
     """注册新用户"""
     # 将用户加入数据库
-    await add_user_in_db(
+    user = await add_user_in_db(
         db_session, request.email, request.username, request.password, groups
     )
-    # 创建访问令牌和刷新令牌
-    result = await create_token(db_session, request.email, request.password)
-    # 在 cookie 中设置 refresh_token
-    response.set_cookie(
-        key="refresh_token",
-        value=result["refresh_token"],
-        httponly=True,  # 防止 JavaScript 访问 cookie
-        secure=False,
-        samesite="lax",
-    )
+    # 登录
+    user, tokens = await login_by_user_id(db_session, user.id, response)
     # 设置 user_id 到 ContextVar
-    user_id_ctx.set(str(result["user_id"]))
+    user_id_ctx.set(str(user.id))
     auth_logger.info("User register")
-    return LoginResponse(**result)
+    return LoginResponse(**tokens)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -78,30 +70,36 @@ async def api_login(
     response: Response,
 ) -> LoginResponse:
     """用户登录"""
+    # 通过邮箱获取用户信息，包含权限信息
+    user = await get_user(db_session, email=request.email, options="scope")
     # 创建访问令牌和刷新令牌
-    result = await create_token(db_session, request.email, request.password)
+    tokens = await create_token(db_session, user.id, user.scopes)
     # 在 cookie 中设置 refresh_token
     response.set_cookie(
         key="refresh_token",
-        value=result["refresh_token"],
-        httponly=True,  # 防止 JavaScript 访问 cookie
+        value=tokens["refresh_token"],
+        httponly=True,
         secure=False,
         samesite="lax",
     )
     # 设置 user_id 到 ContextVar
-    user_id_ctx.set(str(result["user_id"]))
+    user_id_ctx.set(str(user.id))
     auth_logger.info("User login")
-    return LoginResponse(**result)
+    return LoginResponse(**tokens)
 
 
 @router.post("/refresh", response_model=LoginResponse)
 async def api_refresh(
     db_session: Annotated[AsyncSession, Depends(get_auth_db)],
     payload: Annotated[RefreshTokenPayload, Depends(authenticate_refresh_token)],
+    response: Response,
 ) -> LoginResponse:
     """刷新令牌"""
     auth_logger.info("User refresh token")
-    tokens = await refresh_token(db_session, payload, [])
+    # 撤销旧的刷新令牌
+    await revoke_refresh_token(db_session, payload.jti, payload.sub)
+    # 登录
+    user, tokens = await login_by_user_id(db_session, payload.sub, response)
     return LoginResponse(**tokens)
 
 
@@ -113,8 +111,7 @@ async def api_me(
     """获取当前用户信息"""
     auth_logger.info("User get user info")
     user = await get_user(db_session, payload.sub)
-    groups = [g.name for g in user.group]
-    return UserResponse(username=user.name, email=user.email, groups=groups)
+    return UserResponse(username=user.name, email=user.email, groups=user.groups)
 
 
 @router.post("/me/username", status_code=status.HTTP_202_ACCEPTED)
@@ -139,19 +136,11 @@ async def api_update_email(
     auth_logger.info("User update email")
     # 修改邮箱
     await update_email(db_session, payload.sub, request.email)
-    # 撤销该用户的所有历史刷新令牌
+    # 撤销用户的所有刷新令牌
     await revoke_all_refresh_tokens(db_session, payload.sub)
     auth_logger.info(f"User {payload.sub} email updated, all refresh tokens revoked")
-    # 生成新的访问令牌和刷新令牌
-    tokens = await refresh_token(db_session, payload, [])
-    # 设置新的 refresh_token cookie
-    response.set_cookie(
-        key="refresh_token",
-        value=tokens["refresh_token"],
-        httponly=True,
-        secure=False,
-        samesite="lax",
-    )
+    # 登录
+    user, tokens = await login_by_user_id(db_session, payload.sub, response)
     return LoginResponse(**tokens)
 
 
@@ -164,21 +153,13 @@ async def api_update_password(
 ) -> LoginResponse:
     """修改密码"""
     auth_logger.info("User update password")
-    # 验证并修改密码
+    # 修改密码
     await update_password(db_session, payload.sub, request.password)
-    # 撤销该用户的所有历史刷新令牌
+    # 撤销用户的所有刷新令牌
     await revoke_all_refresh_tokens(db_session, payload.sub)
     auth_logger.info(f"User {payload.sub} password updated, all refresh tokens revoked")
-    # 生成新的访问令牌和刷新令牌
-    tokens = await refresh_token(db_session, payload, [])
-    # 设置新的 refresh_token cookie
-    response.set_cookie(
-        key="refresh_token",
-        value=tokens["refresh_token"],
-        httponly=True,
-        secure=False,
-        samesite="lax",
-    )
+    # 登录
+    user, tokens = await login_by_user_id(db_session, payload.sub, response)
     return LoginResponse(**tokens)
 
 

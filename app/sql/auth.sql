@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS `scope`;
 
 CREATE TABLE `scope` (
     `id` INT AUTO_INCREMENT COMMENT '权限范围ID',
-    `name` VARCHAR(100) COMMENT '权限范围名称',
+    `name` VARCHAR(100) NOT NULL COMMENT '权限范围名称',
     `description` VARCHAR(100) DEFAULT NULL COMMENT '权限范围描述',
     `create_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `yn` TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用',

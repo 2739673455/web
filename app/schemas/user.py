@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
@@ -13,6 +15,16 @@ class RefreshTokenPayload(BaseModel):
     scope: list[str]
     exp: float
     jti: str
+
+
+class UserData(BaseModel):
+    id: int
+    name: str
+    email: str
+    password_hash: str
+    create_at: datetime | None
+    groups: list[str] = []
+    scopes: list[str] = []
 
 
 class RegisterRequest(BaseModel):

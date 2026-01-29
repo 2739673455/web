@@ -28,8 +28,8 @@ class Scope(Base):
     __table_args__ = {'comment': '权限范围'}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, comment='权限范围ID')
+    name: Mapped[str] = mapped_column(String(100), nullable=False, comment='权限范围名称')
     yn: Mapped[int] = mapped_column(TINYINT, nullable=False, server_default=text("'1'"), comment='是否启用')
-    name: Mapped[Optional[str]] = mapped_column(String(100), comment='权限范围名称')
     description: Mapped[Optional[str]] = mapped_column(String(100), comment='权限范围描述')
     create_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'), comment='创建时间')
 
