@@ -39,18 +39,17 @@ from app.utils.log import auth_logger
 router = APIRouter(prefix="/user", tags=["用户管理"])
 
 
-@router.post(
-    "/register",
-    response_model=LoginResponse,
-    dependencies=[Depends(verify_email_exists)],
-)
+@router.post("/register", response_model=LoginResponse)
 async def api_register(
     request: RegisterRequest,
     db_session: Annotated[AsyncSession, Depends(get_auth_db)],
-    groups: Annotated[list[Group], Depends(get_default_group)],
     response: Response,
 ) -> LoginResponse:
     """注册新用户"""
+    # 验证邮箱是否已存在
+    await verify_email_exists(db_session, request.email)
+    # 获取默认组
+    groups = await get_default_group(db_session)
     # 将用户加入数据库
     user = await add_user_in_db(
         db_session, request.email, request.username, request.password, groups
@@ -136,7 +135,7 @@ async def api_update_email(
     auth_logger.info("User update email")
     # 修改邮箱
     await update_email(db_session, payload.sub, request.email)
-    # 撤销用户的所有刷新令牌
+    # 撤销用户所有刷新令牌
     await revoke_all_refresh_tokens(db_session, payload.sub)
     auth_logger.info(f"User {payload.sub} email updated, all refresh tokens revoked")
     # 登录
@@ -155,7 +154,7 @@ async def api_update_password(
     auth_logger.info("User update password")
     # 修改密码
     await update_password(db_session, payload.sub, request.password)
-    # 撤销用户的所有刷新令牌
+    # 撤销用户所有刷新令牌
     await revoke_all_refresh_tokens(db_session, payload.sub)
     auth_logger.info(f"User {payload.sub} password updated, all refresh tokens revoked")
     # 登录

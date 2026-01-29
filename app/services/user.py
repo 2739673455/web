@@ -30,11 +30,12 @@ async def verify_email_exists(db_session: AsyncSession, email: str) -> None:
         raise EmailAlreadyExistsError
 
 
-async def get_default_group(db_session: AsyncSession) -> Group | None:
+async def get_default_group(db_session: AsyncSession) -> list[Group]:
     """获取默认组"""
     stmt = select(Group).where(Group.id == 1)
     result = await db_session.execute(stmt)
-    return result.scalar_one_or_none()
+    group = result.scalar_one_or_none()
+    return [group] if group else []
 
 
 async def get_user(
