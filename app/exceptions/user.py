@@ -9,11 +9,6 @@ class EmailAlreadyExistsError(UserError):
         super().__init__(message)
 
 
-class InvalidCredentialsError(UserError):
-    def __init__(self, message: str = "密码错误"):
-        super().__init__(message)
-
-
 class UserNotFoundError(UserError):
     def __init__(self, message: str = "用户不存在"):
         super().__init__(message)
@@ -21,6 +16,11 @@ class UserNotFoundError(UserError):
 
 class UserDisabledError(UserError):
     def __init__(self, message: str = "用户已被禁用"):
+        super().__init__(message)
+
+
+class InvalidCredentialsError(UserError):
+    def __init__(self, message: str = "密码错误"):
         super().__init__(message)
 
 

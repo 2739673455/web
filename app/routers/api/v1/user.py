@@ -31,6 +31,7 @@ from app.services.user import (
     update_password,
     update_username,
     verify_email_exists,
+    verify_password,
 )
 from app.utils.context import user_id_ctx
 from app.utils.log import auth_logger
@@ -70,9 +71,11 @@ async def api_login(
     """用户登录"""
     # 通过邮箱获取用户信息，包含权限信息
     user, _, scopes = await get_user(db_session, email=request.email, options="scope")
+    # 验证密码
+    verify_password(user, request.password)
     # 创建访问令牌和刷新令牌
     tokens = await create_token(db_session, user.id, scopes)
-    # 在 cookie 中设置 refresh_token
+    # 在 Cookie 中设置 refresh_token
     response.set_cookie(
         key="refresh_token",
         value=tokens["refresh_token"],
@@ -83,21 +86,6 @@ async def api_login(
     # 设置 user_id 到 ContextVar
     user_id_ctx.set(str(user.id))
     auth_logger.info("User login")
-    return LoginResponse(**tokens)
-
-
-@router.post("/refresh", response_model=LoginResponse)
-async def api_refresh(
-    db_session: Annotated[AsyncSession, Depends(get_auth_db)],
-    payload: Annotated[RefreshTokenPayload, Depends(authenticate_refresh_token)],
-    response: Response,
-) -> LoginResponse:
-    """刷新令牌"""
-    auth_logger.info("User refresh token")
-    # 撤销旧的刷新令牌
-    await revoke_refresh_token(db_session, payload.jti, payload.sub)
-    # 登录
-    user, tokens = await login_by_user_id(db_session, payload.sub, response)
     return LoginResponse(**tokens)
 
 
@@ -161,6 +149,21 @@ async def api_update_password(
     return LoginResponse(**tokens)
 
 
+@router.post("/refresh", response_model=LoginResponse)
+async def api_refresh(
+    db_session: Annotated[AsyncSession, Depends(get_auth_db)],
+    payload: Annotated[RefreshTokenPayload, Depends(authenticate_refresh_token)],
+    response: Response,
+) -> LoginResponse:
+    """刷新令牌"""
+    auth_logger.info("User refresh token")
+    # 撤销旧的刷新令牌
+    await revoke_refresh_token(db_session, payload.jti, payload.sub)
+    # 登录
+    user, tokens = await login_by_user_id(db_session, payload.sub, response)
+    return LoginResponse(**tokens)
+
+
 @router.post("/logout")
 async def api_logout(
     db_session: Annotated[AsyncSession, Depends(get_auth_db)],
@@ -168,4 +171,5 @@ async def api_logout(
 ):
     """用户登出"""
     auth_logger.info("User logout")
+    # 撤销旧的刷新令牌
     await revoke_refresh_token(db_session, payload.jti, payload.sub)

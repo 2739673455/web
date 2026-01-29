@@ -60,8 +60,8 @@ class Cfg(BaseModel):
     auth: AuthCfg
     cos: COSCfg
     encryption_key: str
-    port: int
     cors_origins: list[str]
+    port: int
 
 
 base_cfg = OmegaConf.load(CONFIG_DIR / "config.yml")  # 加载

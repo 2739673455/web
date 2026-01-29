@@ -43,6 +43,6 @@ cos: # 腾讯云COS配置
   scheme: https
 
 encryption_key: ${oc.env:ENCRYPTION_KEY}
-port: 12321
 cors_origins:
   - http://localhost:12321
+port: 12321

@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.entities.auth import Group, Scope, User
 from app.exceptions.user import (
     EmailAlreadyExistsError,
+    InvalidCredentialsError,
     UserDisabledError,
     UserEmailSameError,
     UserNameSameError,
@@ -27,6 +28,15 @@ async def verify_email_exists(db_session: AsyncSession, email: str) -> None:
     result = await db_session.execute(stmt)
     if result.scalar_one_or_none():
         raise EmailAlreadyExistsError
+
+
+def verify_password(user: User, password: str) -> None:
+    """验证密码"""
+    # 使用 dummy_password 避免时序攻击
+    target_hash = user.password_hash if user else HASHED_DUMMY_PASSWORD
+    password_correct = passwd_hash.verify(password, target_hash)
+    if not password_correct:
+        raise InvalidCredentialsError  # 邮箱或密码错误
 
 
 async def get_default_group(db_session: AsyncSession) -> list[Group]:
@@ -164,11 +174,11 @@ async def login_by_user_id(db_session: AsyncSession, user_id: int, response: Res
     user, _, scopes = await get_user(db_session, user_id, options="scope")
     # 创建访问令牌和刷新令牌
     tokens = await create_token(db_session, user.id, scopes)
-    # 在 cookie 中设置 refresh_token
+    # 在 Cookie 中设置 refresh_token
     response.set_cookie(
         key="refresh_token",
         value=tokens["refresh_token"],
-        httponly=True,  # 防止 JavaScript 访问 cookie
+        httponly=True,  # 防止 JavaScript 访问 Cookie
         secure=False,
         samesite="lax",
     )

@@ -23,13 +23,13 @@ def register_user_exception_handlers(app):
             content={"detail": str(exc)},
         )
 
-    @app.exception_handler(InvalidCredentialsError)
-    async def invalid_credentials_handler(
-        request: Request, exc: InvalidCredentialsError
+    @app.exception_handler(EmailAlreadyExistsError)
+    async def email_already_exists_handler(
+        request: Request, exc: EmailAlreadyExistsError
     ):
         auth_logger.error(exc)
         return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_409_CONFLICT,
             content={"detail": str(exc)},
         )
 
@@ -49,13 +49,13 @@ def register_user_exception_handlers(app):
             content={"detail": str(exc)},
         )
 
-    @app.exception_handler(EmailAlreadyExistsError)
-    async def email_already_exists_handler(
-        request: Request, exc: EmailAlreadyExistsError
+    @app.exception_handler(InvalidCredentialsError)
+    async def invalid_credentials_handler(
+        request: Request, exc: InvalidCredentialsError
     ):
         auth_logger.error(exc)
         return JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": str(exc)},
         )
 
