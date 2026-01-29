@@ -187,7 +187,7 @@ def _decode_refresh_token(
 
 
 async def authenticate_refresh_token(
-    payload: Annotated[RefreshTokenPayload, _decode_refresh_token],
+    payload: Annotated[RefreshTokenPayload, Depends(_decode_refresh_token)],
     db_session: Annotated[AsyncSession, Depends(get_auth_db)],
 ) -> RefreshTokenPayload:
     """验证刷新令牌"""
