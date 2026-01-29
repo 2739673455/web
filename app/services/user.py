@@ -15,7 +15,6 @@ from app.exceptions.user import (
     UserNotFoundError,
     UserPasswordSameError,
 )
-from app.schemas.user import UserData
 from app.services.auth import create_token
 
 passwd_hash = PasswordHash.recommended()
@@ -43,14 +42,14 @@ async def get_user(
     user_id: int | None = None,
     email: str | None = None,
     options: Literal["group", "scope"] | None = None,
-) -> UserData:
+) -> tuple[User, list[str], list[str]]:
     """通过 user_id 或 email 获取用户信息，可添加组信息和权限范围信息"""
     stmt = select(User)
 
     if user_id:
-        stmt.where(User.id == user_id)
+        stmt = stmt.where(User.id == user_id)
     elif email:
-        stmt.where(User.email == email)
+        stmt = stmt.where(User.email == email)
     else:
         raise ValueError("user_id or email must be provided")
 
@@ -77,15 +76,7 @@ async def get_user(
         else []
     )
 
-    return UserData(
-        id=user.id,
-        name=user.name,
-        email=user.email,
-        password_hash=user.password_hash,
-        create_at=user.create_at,
-        groups=groups,
-        scopes=scopes,
-    )
+    return user, groups, scopes
 
 
 async def add_user_in_db(
@@ -94,7 +85,7 @@ async def add_user_in_db(
     username: str,
     password: str,
     groups: list[Group],
-) -> UserData:
+) -> User:
     """将用户加入数据库"""
     try:
         # 创建用户
@@ -108,15 +99,7 @@ async def add_user_in_db(
         db_session.add(user)
         await db_session.commit()
         await db_session.refresh(user)
-        return UserData(
-            id=user.id,
-            name=user.name,
-            email=user.email,
-            password_hash=user.password_hash,
-            create_at=user.create_at,
-            groups=[],
-            scopes=[],
-        )
+        return user
     except Exception:
         await db_session.rollback()
         raise
@@ -128,7 +111,7 @@ async def update_username(
     """修改用户名"""
     try:
         # 获取用户信息
-        user = await get_user(db_session, user_id)
+        user, _, _ = await get_user(db_session, user_id)
         if user.name == user_name:
             raise UserNameSameError  # 用户名与原用户名相同
         # 更新用户名
@@ -143,7 +126,7 @@ async def update_email(db_session: AsyncSession, user_id: int, email: str) -> No
     """修改邮箱"""
     try:
         # 获取用户信息
-        user = await get_user(db_session, user_id)
+        user, _, _ = await get_user(db_session, user_id)
         if user.email == email:
             raise UserEmailSameError  # 邮箱与原邮箱相同
         # 检查邮箱是否已被使用
@@ -164,7 +147,7 @@ async def update_password(
 ) -> None:
     """修改密码"""
     try:
-        user = await get_user(db_session, user_id)
+        user, _, _ = await get_user(db_session, user_id)
         if passwd_hash.verify(password, user.password_hash):
             raise UserPasswordSameError  # 密码与原密码相同
         # 更新密码
@@ -178,9 +161,9 @@ async def update_password(
 async def login_by_user_id(db_session: AsyncSession, user_id: int, response: Response):
     """通过 user_id 登录"""
     # 获取用户信息，包含权限信息
-    user = await get_user(db_session, user_id, options="scope")
+    user, _, scopes = await get_user(db_session, user_id, options="scope")
     # 创建访问令牌和刷新令牌
-    tokens = await create_token(db_session, user.id, user.scopes)
+    tokens = await create_token(db_session, user.id, scopes)
     # 在 cookie 中设置 refresh_token
     response.set_cookie(
         key="refresh_token",

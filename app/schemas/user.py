@@ -17,16 +17,6 @@ class RefreshTokenPayload(BaseModel):
     jti: str
 
 
-class UserData(BaseModel):
-    id: int
-    name: str
-    email: str
-    password_hash: str
-    create_at: datetime | None
-    groups: list[str] = []
-    scopes: list[str] = []
-
-
 class RegisterRequest(BaseModel):
     email: EmailStr = Field(..., description="邮箱")
     username: str = Field(..., description="用户名")

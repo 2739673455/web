@@ -3,7 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.entities.auth import Group
 from app.schemas.user import (
     AccessTokenPayload,
     LoginRequest,
@@ -70,9 +69,9 @@ async def api_login(
 ) -> LoginResponse:
     """用户登录"""
     # 通过邮箱获取用户信息，包含权限信息
-    user = await get_user(db_session, email=request.email, options="scope")
+    user, _, scopes = await get_user(db_session, email=request.email, options="scope")
     # 创建访问令牌和刷新令牌
-    tokens = await create_token(db_session, user.id, user.scopes)
+    tokens = await create_token(db_session, user.id, scopes)
     # 在 cookie 中设置 refresh_token
     response.set_cookie(
         key="refresh_token",
@@ -109,8 +108,8 @@ async def api_me(
 ) -> UserResponse:
     """获取当前用户信息"""
     auth_logger.info("User get user info")
-    user = await get_user(db_session, payload.sub)
-    return UserResponse(username=user.name, email=user.email, groups=user.groups)
+    user, groups, _ = await get_user(db_session, payload.sub)
+    return UserResponse(username=user.name, email=user.email, groups=groups)
 
 
 @router.post("/me/username", status_code=status.HTTP_202_ACCEPTED)
