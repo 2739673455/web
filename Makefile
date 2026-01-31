@@ -7,10 +7,10 @@ help:
 	@echo "make fd        - 启动前端开发服务器"
 
 init_db:
-	uv run app/utils/_init_db.py
+	cd backend && uv run app/utils/_init_db.py
 app:
-	uv run -m app.main
+	cd backend && uv run -m app.main
 test:
-	uv run pytest
+	cd backend && uv run -m pytest tests/
 fd:
-	cd fd && pnpm dev
+	cd frontend && pnpm dev

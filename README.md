@@ -1,363 +1,63 @@
-# 聊天项目
-## 关键逻辑
-### 用户管理
-
-#### 用户注册
-##### 流程
-1. 用户输入用户名、邮箱、密码
-2. 请求后端注册用户
-3. 返回刷新令牌和访问令牌
-##### 错误处理
-1. 邮箱已注册
-2. 邮箱格式不正确
-3. 密码与确认密码不一致
-4. 密码不符合要求
-
-#### 用户登陆
-##### 流程
-1. 用户输入邮箱、密码
-2. 请求后端登陆用户
-3. 返回刷新令牌和访问令牌
-##### 错误处理
-1. 邮箱不存在
-2. 密码错误
-
-#### 获取用户信息
-##### 流程
-1. 请求后端获取用户信息
-2. 返回用户名、邮箱、用户组
-
-#### 修改用户名
-##### 流程
-1. 用户输入新用户名
-2. 请求后端修改用户名
-
-#### 修改邮箱
-##### 流程
-1. 用户输入新邮箱
-2. 请求后端修改邮箱
-##### 错误处理
-1. 邮箱已存在
-2. 邮箱格式不正确
-
-#### 修改密码
-##### 流程
-1. 用户输入新密码、确认新密码
-2. 请求后端修改密码
-3. 撤销该用户所有旧的刷新令牌
-4. 返回刷新令牌和访问令牌
-##### 错误处理
-1. 新密码和确认新密码不一致
-2. 新密码不符合要求
-
-#### 用户登出
-##### 流程
-1. 请求后端登出用户
-2. 撤销刷新令牌
-
-#### 刷新访问令牌
-##### 流程
-1. 前端拦截到访问令牌过期异常
-2. 请求后端刷新访问令牌
-3. 撤销刷新令牌
-4. 返回刷新令牌和访问令牌
-
-### 模型配置管理
-#### 获取所有模型配置
-##### 流程
-1. 请求后端获取所有模型配置
-
-#### 新建模型配置
-##### 流程
-1. 用户输入模型配置名称、base_url、模型名称、api_key
-2. 请求后端创建模型配置
-3. 后端检查权限，返回模型配置ID；或返回无权创建新配置
-
-#### 修改模型配置
-##### 流程
-1. 用户输入模型配置名称、base_url、模型名称、api_key
-2. 请求后端修改模型配置
-
-#### 删除模型配置
-##### 流程
-1. 请求后端删除模型配置
-
-### 对话管理
-#### 获取对话列表
-##### 流程
-1. 请求后端获取对话列表
-
-#### 为对话选择模型
-##### 流程
-1. 选择一个对话后，选择模型配置
-2. 请求后端更新对话对应的模型配置
-
-#### 删除对话
-##### 流程
-1. 请求后端删除对话
-
-### 聊天管理
-#### 创建新对话并发送消息
-##### 流程
-1. 用户输入消息，上传图片
-2. 点击发送后，请求后端获取对话id
-3. 如果消息内有图片，请求后端获取预签名上传url，上传图片
-4. 请求后端生成对话标题、生成ai回复
-5. 更新对话标题，流式打印ai回复
-
-#### 发送消息
-##### 流程
-1. 点击发送后，请求后端获取预签名上传url，上传图片
-2. 请求后端生成ai回复
-3. 流式打印ai回复
-
-
-# 聊天后端系统
-## 功能
-### 用户管理 [user](app/routers/api/v1/user.py)
-1. 注册 `POST /user/register`
-   - 请求体
-      - 邮箱
-      - 用户名
-      - 密码
-   1. 数据库中添加用户
-   2. 自动登录，返回刷新令牌和访问令牌
-2. 登录 `POST /user/login`
-   - 请求体
-      - 邮箱
-      - 密码
-   1. 返回刷新令牌和访问令牌
-3. 刷新令牌 `POST /user/refresh`
-   - 请求头
-     - 刷新令牌
-   1. 返回刷新令牌和访问令牌
-4. 获取个人信息 `GET /user/me`
-   - 请求头
-      - 访问令牌
-   1. 返回用户名、邮箱、用户组
-5. 修改用户名 `POST /user/me/username`
-   - 请求头
-      - 访问令牌  
-   - 请求体
-      - 新用户名
-   1. 修改用户名
-6. 修改邮箱 `POST /user/me/email`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 新邮箱
-   1. 修改邮箱
-7. 修改密码 `POST /user/me/password`
-   - 请求头
-      - 刷新令牌
-   - 请求体
-      - 新密码
-   1. 修改密码
-   2. 撤销刷新令牌
-   3. 返回新的刷新令牌和访问令牌
-8. 登出 `POST /user/logout`
-   - 请求头
-     - 刷新令牌
-   1. 撤销刷新令牌
-### 模型配置管理 [model_config](app/routers/api/v1/model_config.py)
-1. 获取模型配置 `GET /model_config`
-   - 请求头
-      - 访问令牌
-   1. 返回用户模型配置列表
-2. 检查是否能创建新的模型配置 `POST /model_config/can_create`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 模型配置数量
-   1. 返回能否创建
-3. 创建模型配置 `POST /model_config/create`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 配置名称
-      - 模型 url
-      - 模型名称
-      - 模型 API Key
-      - 其他配置参数
-   1. 创建模型配置
-   2. 返回模型配置信息
-4. 更新模型配置 `POST /model_config/update`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 配置 ID
-      - 配置名称
-      - 模型 url
-      - 模型名称
-      - 模型 API Key
-      - 其他配置参数
-   1. 更新模型配置
-5. 批量删除模型配置 `POST /model_config/delete`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 配置 ID 列表
-   1. 删除模型配置
-### 对话管理 [conversation](app/routers/api/v1/conversation.py)
-1. 获取对话 `GET /conversation`
-   - 请求头
-      - 访问令牌
-   1. 返回用户对话列表
-2. 创建对话 `POST /conversation/create`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 模型配置 ID
-   1. 创建对话，返回对话 ID
-3. 生成对话标题 `POST /conversation/generate_title`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 对话 ID
-      - 消息 (图片url为预签名上传url)
-      - 模型 url
-      - 模型名称
-      - 模型 API Key
-      - 其他配置参数
-   1. 处理消息中的预签名上传url为预签名下载url
-   2. 调用模型生成标题
-   3. 更新数据库中的对话标题
-   4. 返回对话标题
-4. 删除对话 `POST /conversation/delete`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 对话 ID 列表
-   1. 删除对话
-### 聊天功能 [chat](app/routers/api/v1/chat.py)
-1. 获取预签名上传url `POST /chat/get_upload_presigned_url`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 对话 ID
-      - 文件后缀名列表
-   1. 使用用户ID、对话ID、文件后缀名生成cos_key
-   2. 使用cos_key生成预签名上传url，返回相应数量的url
-2. 获取消息记录 `GET /chat/{id}`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 对话 ID
-   1. 获取消息记录
-   2. 处理消息中的cos_key为预签名下载url
-   3. 返回消息记录
-3. 发送消息并获取AI流式回复 `POST /chat/send`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 对话 ID
-      - 消息
-      - 模型 url
-      - 模型名称
-      - 模型 API Key
-      - 其他配置参数
-   1. 处理消息中的图片url为cos_url
-   2. 用户消息存入数据库
-   3. 处理消息中的cos_url为预签名下载url
-   4. 流式返回AI回复
-   5. 生成完毕后，AI回复存入数据库
-   6. 返回用户消息ID和AI回复消息ID
-4. WebSocket 聊天接口 `WS /chat/ws/chat`
-   - 请求头
-      - 访问令牌
-   - 请求体
-      - 对话 ID
-      - 消息
-      - 模型 url
-      - 模型名称
-      - 模型 API Key
-      - 其他配置参数
-   1. 处理消息中的图片url为cos_url
-   2. 用户消息存入数据库
-   3. 处理消息中的cos_url为预签名下载url
-   4. 流式返回AI回复
-   5. 生成完毕后，AI回复存入数据库
-   6. 返回用户消息ID和AI回复消息ID
-
-## 图片存储
-腾讯云COS: https://console.cloud.tencent.com/cos  
-使用主用户;或者创建子用户并绑定权限 `QcloudCOSFullAccess`  
-Python SDK: https://cloud.tencent.com/document/product/436/12269  
-使用时需要用到子用户的 `secret_id` 和 `secret_key`，以及主用户的 `APPID`  
-图片的key格式为 `user_id/conversation_id/images/xxx.jpg`  
-暂时只支持用户发送图片，不支持模型发送图片
-
-## 关键流程
-### 创建新模型配置时
-1. 用户点击创建新的模型配置
-2. 前端请求检查是否能创建新模型配置
-3. 后端从访问令牌中获取权限范围，检查是否有权限创建新模型配置
-4. 后端返回能否创建新的模型配置
-5. 前端根据返回结果创建新模型配置或提醒无权创建新配置
-### 新建对话时
-1. 用户通过新对话发送消息
-2. 前端请求生成新对话
-3. 后端返回对话ID
-4. 前端根据消息中的图片，请求预签名上传url(带有用户ID和对话ID)
-5. 后端生成cos_key和预签名上传url，返回前端
-6. 前端通过预签名上传url上传图片
-7. 前端同时请求生成对话标题和获取AI回复
-8. 后端接收消息，从消息中的预签名上传url中提取出cos_key，生成预签名下载url，输入模型
-9. 后端返回对话标题和AI回复
-### 聊天时
-1. 用户上传图片
-2. 前端根据消息中的图片，请求预签名上传url
-3. 后端生成cos_key和预签名上传url，返回前端
-4. 前端通过预签名上传url上传图片
-5. 前端将消息列表发给后端，请求AI回复
-6. 后端接收消息，从消息中的预签名上传url中提取出cos_key ，替换为预签名下载url，输入模型
-7. 后端返回AI回复
-### 加载消息历史时
-1. 加载历史消息时，后端将消息中的cos_key替换为预签名下载url，发给前端
-2. 前端获取消息，用预签名下载url下载图片
-
-## 日志管理
-中间件获取请求头中的信息，存入上下文变量，包括:
-- request_id
-- trace_id
-- client_ip
-- method
-- path
-
-# 聊天前端系统
-## 快速开始
-### 启用 pnpm
-项目使用 pnpm 作为包管理器。可以通过 corepack 启用：
+# 启动服务
 ```bash
-corepack enable
-corepack prepare pnpm@latest --activate
+docker-compose up -d
 ```
 
-### 安装依赖
-```bash
-cd fd
-pnpm install
+# 修改 volumes/backend/configs中的配置文件
+`config.yml`:
+```yaml
+db: # 数据库
+  app: # 应用数据库
+    host: mysql-server <--- 修改
+    port: 3306
+    user: root
+    password: ${oc.env:APP_DB_PASSWORD}
+    database: chat
+  auth: # 认证数据库
+    host: mysql-server <--- 修改
+    port: 3306
+    user: root
+    password: ${oc.env:AUTH_DB_PASSWORD}
+    database: auth
+...
 ```
 
-### 开发模式
+`.env`:
 ```bash
-pnpm dev
+# 应用数据库密码
+APP_DB_PASSWORD=123321
+# 认证数据库密码
+AUTH_DB_PASSWORD=123321
+
+# 令牌加密密钥 生成: python -c "import secrets; print(secrets.token_hex(32))"
+AUTH_SECRET_KEY=d6a5d730ec247d487f17419df966aec9d4c2a09d2efc9699d09757cf94c68b01
+# API-Key加密密钥 生成: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+ENCRYPTION_KEY=onuuwtwtfgqzvoQsvK5lPWapRw4ny7XGhhQSBIMHptI=
+
+# 腾讯云APPID
+COS_APP_ID= <--- 添加
+# 腾讯云COS SECRET-ID
+COS_SECRET_ID= <--- 添加
+# 腾讯云COS SECRET-KEY
+COS_SECRET_KEY= <--- 添加
 ```
 
-### 构建生产版本
+# 重启特定服务
 ```bash
-pnpm build
+docker-compose restart backend
+docker-compose restart frontend
 ```
 
-## API 代理
-Vite 配置了 API 代理，将 `/api` 请求转发到后端服务。修改 `vite.config.ts` 中的 `target` 以指向后端地址：
+# 访问应用
+- **前端界面**: http://localhost
+- **后端 API DOC**: http://localhost:12321/docs
 
-```typescript
-proxy: {
-  '/api': {
-    target: 'http://localhost:8000', // 后端地址
-    changeOrigin: true,
-    rewrite: (path) => path.replace(/^\/api/, '')
-  }
-}
+# 停止服务
+```bash
+docker-compose down
+```
+
+# 重新构建并启动
+```bash
+docker-compose up -d --build
 ```
