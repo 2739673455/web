@@ -1,14 +1,12 @@
 from contextlib import asynccontextmanager
 
 import uvicorn
-from app.config import CFG
 from app.handlers import register_exception_handlers
-from app.middleware import log_middleware
-from app.routers.api import api
+from app.middlewares import trace
+from app.routers import api
 from app.services.database import db_manager
 from app.utils.log import setup_logger
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager
@@ -21,16 +19,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # 日志中间件
-app.middleware("http")(log_middleware)
-
-# CORS 中间件
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CFG.cors_origins,  # 允许的源列表
-    allow_credentials=True,  # 允许 Authorization headers, Cookies
-    allow_methods=["*"],  # 允许的HTTP方法列表
-    allow_headers=["*"],  # 允许的请求头列表
-)
+app.middleware("http")(trace.middleware)
 
 # 注册异常处理
 register_exception_handlers(app)
@@ -44,8 +33,4 @@ async def health():
 app.include_router(api.router)
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=CFG.port,
-    )
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8888)
