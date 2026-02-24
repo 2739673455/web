@@ -2,10 +2,6 @@ import asyncio
 import json
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.schemas.chat import (
     ConversationTitleResponse,
     GetUploadPresignedUrlRequest,
@@ -23,9 +19,11 @@ from app.services.chat import (
     image_url_to_get_presigned_url,
     stream_response,
 )
-from app.services.database import get_app_db
-from app.utils.cos import generate_image_cos_key, get_upload_presigned_url
-from app.utils.log import app_logger
+from app.utils import db
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/chat", tags=["聊天"])
 
@@ -33,11 +31,11 @@ router = APIRouter(prefix="/chat", tags=["聊天"])
 @router.get("/{conversation_id}", response_model=MessageListResponse)
 async def api_get_messages(
     conversation_id: int,
-    db_session: Annotated[AsyncSession, Depends(get_app_db)],
+    db_session: Annotated[AsyncSession, Depends(db.get_app_db)],
     payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ) -> MessageListResponse:
     """获取消息记录"""
-    app_logger.info(f"User get messages: {conversation_id=}")
+    logger.info(f"User get messages: {conversation_id=}")
     messages = await get_messages(db_session, conversation_id)
     # 转换cos_url为预签名下载url
     await image_url_to_get_presigned_url(messages)
@@ -60,7 +58,7 @@ async def api_get_upload_presigned_url(
     payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ) -> GetUploadPresignedUrlResponse:
     """获取带预签名的上传url"""
-    app_logger.info(
+    logger.info(
         f"User get upload presigned url: conversation_id={request.conversation_id}"
     )
     cos_keys = [
@@ -79,7 +77,7 @@ async def api_generate_conversation_title(
     payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ) -> ConversationTitleResponse:
     """生成对话标题"""
-    app_logger.info(f"User generate conversation title: {request.conversation_id}")
+    logger.info(f"User generate conversation title: {request.conversation_id}")
     # 转换预签名上传url为预签名下载url
     await image_url_to_get_presigned_url(request.messages)
     # 生成标题
@@ -95,11 +93,11 @@ async def api_generate_conversation_title(
 @router.post("/send")
 async def api_send_message(
     request: SendMessageRequest,
-    db_session: Annotated[AsyncSession, Depends(get_app_db)],
+    db_session: Annotated[AsyncSession, Depends(db.get_app_db)],
     payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """发送消息,获取AI流式回复"""
-    app_logger.info(f"User send message: conversation_id={request.conversation_id}")
+    logger.info(f"User send message: conversation_id={request.conversation_id}")
     return StreamingResponse(
         stream_response(
             conversation_id=request.conversation_id,
@@ -119,7 +117,7 @@ async def api_send_message(
 async def api_websocket_chat(
     websocket: WebSocket,
     conversation_id: int,
-    db_session: Annotated[AsyncSession, Depends(get_app_db)],
+    db_session: Annotated[AsyncSession, Depends(db.get_app_db)],
     payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
 ):
     """WebSocket 聊天接口"""
@@ -128,7 +126,7 @@ async def api_websocket_chat(
         while True:
             try:
                 data = await websocket.receive_json()
-                app_logger.info(f"User websocket chat: {conversation_id=}")
+                logger.info(f"User websocket chat: {conversation_id=}")
                 request = WebSocketChatRequest(**data)
             except json.JSONDecodeError:
                 await websocket.send_json(

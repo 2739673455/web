@@ -29,9 +29,16 @@ class LogCfg(BaseModel):
     max_file_size: str
 
 
+# 认证服务
+class AuthServiceCfg(BaseModel):
+    base_url: str
+    verify_access_token: str
+
+
 class Cfg(BaseModel):
     db: DBCfg
     log: LogCfg
+    auth_service: AuthServiceCfg
 
 
 CONFIG_DIR = Path(__file__).parent.parent / "configs"  # 配置文件目录
