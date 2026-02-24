@@ -12,3 +12,11 @@ async def get_by_conversation_id(
     stmt = select(Message).where(Message.conversation_id == conversation_id)
     result = await db_session.execute(stmt)
     return result.scalars().all()
+
+
+async def create():
+    """创建消息"""
+
+
+async def remove():
+    """批量删除消息(逻辑删除)"""
