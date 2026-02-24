@@ -1,18 +1,8 @@
 from typing import Annotated
 
+from app.exceptions import conversation as conversation_error
 from app.repositories import conversation as conversation_repo
-from app.schemas.conversation import (
-    ConversationListResponse,
-    ConversationResponse,
-    CreateConversationRequest,
-    DeleteConversationRequest,
-    UpdateConversationRequest,
-)
-from app.services.conversation import (
-    create_conversation,
-    delete_conversations,
-    update_conversation_data,
-)
+from app.schemas import conversation as conversation_schema
 from app.utils import db
 from fastapi import APIRouter, Depends, Request, status
 from loguru import logger
@@ -24,16 +14,16 @@ router = APIRouter(prefix="/conversation", tags=["对话管理"])
 @router.get("/list")
 async def api_list_conversations(
     request: Request, db_session: Annotated[AsyncSession, Depends(db.get_app_db)]
-) -> ConversationListResponse:
+) -> conversation_schema.ConversationListResponse:
     """获取对话列表"""
     payload = request.state.payload
     conversations = await conversation_repo.get_by_user_id(db_session, payload.sub)
     logger.info(
         f"User get conversations: conversations={[i.id for i in conversations]}"
     )
-    return ConversationListResponse(
+    return conversation_schema.ConversationListResponse(
         conversations=[
-            ConversationResponse(
+            conversation_schema.ConversationResponse(
                 conversation_id=i.id, title=i.title, update_at=i.update_at
             )
             for i in conversations
@@ -41,74 +31,37 @@ async def api_list_conversations(
     )
 
 
-@router.get("/{conversation_id}", response_model=ConversationResponse)
-async def api_get_conversation(
-    conversation_id: int,
-    db_session: Annotated[AsyncSession, Depends(db.get_app_db)],
-) -> MessageListResponse:
-    """获取对话消息"""
-    logger.info(f"User get messages: {conversation_id=}")
-    messages = await get_messages(db_session, conversation_id)
-    return MessageListResponse(
-        messages=[
-            MessageItem(
-                message_id=message.id,
-                role=message.role,
-                content=message.content,
-                timestamp=message.timestamp,
-            )
-            for message in messages
-        ]
-    )
-
-
-@router.post(
-    "/create", status_code=status.HTTP_201_CREATED, response_model=ConversationResponse
-)
+@router.post("/create", status_code=status.HTTP_201_CREATED)
 async def api_create_conversation(
-    request: CreateConversationRequest,
-    db_session: Annotated[AsyncSession, Depends(db.get_app_db)],
-    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
-) -> ConversationResponse:
+    request: Request, db_session: Annotated[AsyncSession, Depends(db.get_app_db)]
+) -> conversation_schema.ConversationResponse:
     """创建新对话"""
-    conversation = await create_conversation(
-        db_session, payload.sub, request.model_config_id
-    )
-    logger.info(f"User create conversation: {conversation.id}")
-    return ConversationResponse(
-        conversation_id=conversation.id,
-        title=None,
-        update_at=conversation.update_at,
-        model_config_id=conversation.model_config_id,
+    payload = request.state.payload
+    conversation = await conversation_repo.create(db_session, payload.sub)
+    logger.info(f"User create conversation: conversation_id={conversation.id}")
+    return conversation_schema.ConversationResponse(
+        conversation_id=conversation.id, title=None, update_at=conversation.update_at
     )
 
 
 @router.post("/update")
 async def api_update_conversation(
-    request: UpdateConversationRequest,
+    body: conversation_schema.UpdateConversationRequest,
     db_session: Annotated[AsyncSession, Depends(db.get_app_db)],
-    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
-):
+) -> None:
     """修改对话信息"""
-    logger.info(
-        f"User update conversation: conversation={request.conversation_id}, model_config_id={request.model_config_id}"
-    )
-    conversation_data = {}
-    if request.title is not None:
-        conversation_data["title"] = request.title
-    if request.model_config_id is not None:
-        conversation_data["model_config_id"] = request.model_config_id
-    await update_conversation_data(
-        db_session, request.conversation_id, conversation_data
-    )
+    logger.info(f"User update conversation: conversation_id={body.conversation_id}")
+    conversation = await conversation_repo.get_by_id(db_session, body.conversation_id)
+    if not conversation:
+        raise conversation_error.ConversationNotFoundError  # 对话不存在
+    await conversation_repo.modify(db_session, conversation, body.title)
 
 
-@router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/delete")
 async def api_delete_conversations(
-    request: DeleteConversationRequest,
+    body: conversation_schema.DeleteConversationRequest,
     db_session: Annotated[AsyncSession, Depends(db.get_app_db)],
-    payload: Annotated[AccessTokenPayload, Depends(authenticate_access_token)],
-):
-    """删除对话"""
-    logger.info(f"User delete conversations: {request.ids}")
-    await delete_conversations(db_session, request.ids)
+) -> None:
+    """批量删除对话"""
+    logger.info(f"User delete conversations: conversation_ids={body.conversation_ids}")
+    await conversation_repo.remove(db_session, body.conversation_ids)

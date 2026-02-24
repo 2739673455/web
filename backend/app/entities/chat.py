@@ -2,6 +2,7 @@ from typing import Optional
 import datetime
 
 from sqlalchemy import BigInteger, DateTime, ForeignKeyConstraint, Index, String, Text, text
+from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
@@ -19,6 +20,7 @@ class Conversation(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, comment='用户ID')
     create_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'), comment='创建时间')
     update_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), comment='更新时间')
+    yn: Mapped[int] = mapped_column(TINYINT, nullable=False, server_default=text("'1'"), comment='是否启用')
     title: Mapped[Optional[str]] = mapped_column(String(200), comment='对话标题')
 
     message: Mapped[list['Message']] = relationship('Message', back_populates='conversation')
@@ -33,10 +35,10 @@ class Message(Base):
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, comment='消息ID')
-    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, comment='用户ID')
     conversation_id: Mapped[int] = mapped_column(BigInteger, nullable=False, comment='对话ID')
     role: Mapped[str] = mapped_column(String(20), nullable=False, comment='发送者 (user/assistant/tool)')
     content: Mapped[str] = mapped_column(Text, nullable=False, comment='消息内容 (JSON 字符串)')
-    timestamp: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'), comment='发送时间')
+    create_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'), comment='创建时间')
+    yn: Mapped[int] = mapped_column(TINYINT, nullable=False, server_default=text("'1'"), comment='是否启用')
 
     conversation: Mapped['Conversation'] = relationship('Conversation', back_populates='message')
