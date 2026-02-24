@@ -21,7 +21,6 @@ class ConversationResponse(BaseModel):
     conversation_id: int
     title: str | None
     update_at: datetime
-    model_config_id: int | None
 
 
 class ConversationListResponse(BaseModel):
