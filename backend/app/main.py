@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 import uvicorn
-from app.handlers import register_exception_handlers
+from app.exceptions.handlers import register_exception_handlers
 from app.middlewares import trace
 from app.routers import api
 from app.services.database import db_manager

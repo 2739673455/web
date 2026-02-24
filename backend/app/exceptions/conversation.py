@@ -1,9 +1,8 @@
 """对话管理异常"""
 
+from app.exceptions.base import NotFoundError
 
-class ConversationError(Exception): ...
 
-
-class ConversationNotFoundError(ConversationError):
-    def __init__(self, message: str = "对话不存在"):
-        super().__init__(message)
+class ConversationNotFoundError(NotFoundError):
+    code = 2001
+    message = "对话不存在"
