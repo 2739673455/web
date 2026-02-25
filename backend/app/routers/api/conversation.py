@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from app.config import CFG
 from app.exceptions import conversation as conversation_error
 from app.repositories import conversation as conversation_repo
 from app.schemas import conversation as conversation_schema
@@ -67,3 +68,10 @@ async def api_delete_conversations(
     """批量删除对话"""
     logger.info(f"User delete conversations: conversation_ids={body.conversation_ids}")
     await conversation_repo.remove(db_session, body.conversation_ids)
+
+
+@router.get("/models")
+async def api_get_models() -> conversation_schema.ConversationModelsResponse:
+    return conversation_schema.ConversationModelsResponse(
+        model_codes=list(CFG.model_service.models.keys())
+    )

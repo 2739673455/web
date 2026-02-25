@@ -16,7 +16,7 @@ async def middleware(request: Request, call_next: Callable) -> Response:
         )
         if resp.status_code == 200:
             payload = resp.json()
-            request.state.payload = payload
+            request.state.payload = payload  # 将 payload 存入请求上下文
             return await call_next(request)
         else:
             return JSONResponse(status_code=resp.status_code, content=resp.json())

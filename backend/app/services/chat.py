@@ -2,34 +2,25 @@ import json
 
 from app.config import CFG
 from app.repositories import message as message_repo
-from app.schemas import message
 from app.schemas.message import MessageItem
 from app.utils.call_model import call_model, stream_model
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def generate_title(
-    content: str | list[message.TextContent | message.ImageContent], model_code: str
-):
+async def generate_title(messages: list[MessageItem], model_code: str):
     """调用模型生成对话标题"""
-    # 转换 content 为字典列表
-    if isinstance(content, str):
-        user_content = content
-    else:
-        user_content = [i.to_dict() for i in content]
-
     # 读取模型服务配置
     model = CFG.model_service.models[model_code]
 
     # 调用模型生成标题
+    system_prompt = {
+        "role": "system",
+        "content": "为下面的内容生成一个对话主题，字数控制在20字以内，不要带句号",
+    }
+    message_dicts = [i.to_dict() for i in messages]
+
     return await call_model(
-        [
-            {
-                "role": "system",
-                "content": "为下面的用户提问生成一个简短的概括性标题，字数控制在20字以内，不要带句号",
-            },
-            {"role": "user", "content": user_content},
-        ],
+        [system_prompt, *message_dicts],
         model.base_url,
         model.model_name,
         model.api_key,
@@ -45,28 +36,22 @@ async def stream_response(
 ):
     """流式返回AI回复"""
     # 存储用户消息
-    user_message_id = messages[-1].message_id
-    if not user_message_id:  # 如果用户消息id不存在，则将其存入数据库
-        # 转换 content 格式
-        if isinstance(messages[-1].content, str):
-            user_content = messages[-1].content
-        else:
-            user_content = [i.to_dict() for i in messages[-1].content]
-            user_content = json.dumps(user_content, ensure_ascii=False)
-
-        # 将用户消息存入数据库
+    last_message = messages[-1]
+    if not last_message.message_id:  # 如果用户消息id不存在，则将其存入数据库
+        # 转换 message 格式
+        message_dict = last_message.to_dict()
+        # 将消息存入数据库
         user_message = await message_repo.create(
-            db_session, conversation_id, "user", user_content
+            db_session,
+            conversation_id,
+            message_dict["role"],
+            json.dumps(message_dict["content"], ensure_ascii=False),
         )
-
-        # 获取用户消息id
-        user_message_id = user_message.id
-
-    # 返回用户消息id
-    yield (
-        json.dumps({"type": "user_message_id", "user_message_id": user_message_id})
-        + "\n"
-    )
+        # 返回用户消息id
+        yield (
+            json.dumps({"type": "user_message_id", "user_message_id": user_message.id})
+            + "\n"
+        )
 
     # 读取模型服务配置
     model = CFG.model_service.models[model_code]
@@ -74,8 +59,9 @@ async def stream_response(
     try:
         # 流式调用模型
         chunks: list[str] = []
+        message_dicts = [i.to_dict() for i in messages]
         async for chunk in stream_model(
-            messages, model.base_url, model.model_name, model.api_key, model.params
+            message_dicts, model.base_url, model.model_name, model.api_key, model.params
         ):
             # 拼接AI消息
             chunks.append(chunk)

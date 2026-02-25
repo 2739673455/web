@@ -42,7 +42,7 @@ async def api_generate_title(
     """生成对话标题"""
     logger.info(f"User generate conversation title: {body.conversation_id}")
     # 生成标题
-    title = await chat_service.generate_title(body.messages[0].content, body.model_code)
+    title = await chat_service.generate_title(body.messages, body.model_code)
     return message_schema.ConversationTitleResponse(title=title)
 
 

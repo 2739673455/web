@@ -20,3 +20,7 @@ class ConversationResponse(BaseModel):
 
 class ConversationListResponse(BaseModel):
     conversations: list[ConversationResponse]
+
+
+class ConversationModelsResponse(BaseModel):
+    model_codes: list[str]
