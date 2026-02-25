@@ -1,3 +1,4 @@
 {
-    "python.defaultInterpreterPath": "/home/kodey/chat-web/backend/.venv/bin/python"
+    "python.defaultInterpreterPath": "/home/kodey/chat-web/backend/.venv/bin/python",
+    "python.terminal.activateEnvironment": false
 }

@@ -14,7 +14,7 @@ class DeleteConversationRequest(BaseModel):
 
 class ConversationResponse(BaseModel):
     conversation_id: int
-    title: str | None
+    title: str
     update_at: datetime
 
 

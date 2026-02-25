@@ -1,5 +1,7 @@
 from typing import Annotated
 
+from app.exceptions import conversation as conversation_error
+from app.repositories import conversation as conversation_repo
 from app.repositories import message as message_repo
 from app.schemas import message as message_schema
 from app.services import chat as chat_service
@@ -49,19 +51,21 @@ async def api_send_message(
     request: Request,
     body: message_schema.SendMessageRequest,
     db_session: Annotated[AsyncSession, Depends(db.get_app_db)],
-):
+) -> StreamingResponse:
     """发送消息,获取AI流式回复"""
     payload = request.state.payload
     logger.info(f"User send message: conversation_id={body.conversation_id}")
+
+    # 检查对话是否属于该用户
+    conversations = await conversation_repo.get_by_user_id(db_session, payload.sub)
+    if body.conversation_id not in [i.id for i in conversations]:
+        raise conversation_error.ConversationNotFoundError  # 对话不存在
+
     return StreamingResponse(
         chat_service.stream_response(
             conversation_id=body.conversation_id,
-            user_id=payload.sub,
             messages=body.messages,
-            base_url=body.base_url,
-            model_name=body.model_name,
-            api_key=body.api_key,
-            params=body.params,
+            model_code=body.model_code,
             db_session=db_session,
         ),
         media_type="text/plain",

@@ -1,12 +1,13 @@
+"""日志配置"""
+
 import json
 import sys
 import traceback
 from pathlib import Path
 
-from loguru import logger
-
 from app.config import CFG, LogCfg
 from app.utils import context
+from loguru import logger
 
 LOGGER_CONFIGURED = False  # 日志是否已初始化
 LOG_DIR = Path(__file__).parent.parent.parent / "logs"  # 日志文件目录

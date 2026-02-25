@@ -23,7 +23,7 @@ async def get_by_user_id(
 
 async def create(db_session: AsyncSession, user_id: int) -> Conversation:
     """创建对话"""
-    conversation = Conversation(user_id=user_id)
+    conversation = Conversation(user_id=user_id, title="新对话")
     db_session.add(conversation)
     await db_session.commit()
     await db_session.refresh(conversation)

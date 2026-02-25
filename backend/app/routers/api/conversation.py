@@ -40,7 +40,9 @@ async def api_create_conversation(
     conversation = await conversation_repo.create(db_session, payload.sub)
     logger.info(f"User create conversation: conversation_id={conversation.id}")
     return conversation_schema.ConversationResponse(
-        conversation_id=conversation.id, title=None, update_at=conversation.update_at
+        conversation_id=conversation.id,
+        title=conversation.title,
+        update_at=conversation.update_at,
     )
 
 

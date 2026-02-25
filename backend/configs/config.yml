@@ -19,3 +19,13 @@ log: # 日志
 auth_service:
   base_url: http://127.0.0.1:7777 # 认证服务url
   verify_access_token: /api/verify_access_token # 验证访问令牌
+
+model_service:
+  model_code: gpt-4o-mini
+  models:
+    gpt-4o-mini:
+      base_url: https://openrouter.ai/api/v1 # 模型服务url
+      api_key: ${oc.env:OPENROUTER_API_KEY} # 模型服务api_key
+      model_name: openai/gpt-4o-mini # 模型名称
+      params:
+        temperature: 2.0

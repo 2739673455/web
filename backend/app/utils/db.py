@@ -1,3 +1,5 @@
+"""数据库会话"""
+
 from typing import AsyncGenerator
 
 from app.config import CFG, MySQLCfg

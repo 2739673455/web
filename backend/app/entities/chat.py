@@ -1,4 +1,3 @@
-from typing import Optional
 import datetime
 
 from sqlalchemy import BigInteger, DateTime, ForeignKeyConstraint, Index, String, Text, text
@@ -18,10 +17,10 @@ class Conversation(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, comment='对话ID')
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, comment='用户ID')
+    title: Mapped[str] = mapped_column(String(200), nullable=False, comment='对话标题')
     create_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP'), comment='创建时间')
     update_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), comment='更新时间')
     yn: Mapped[int] = mapped_column(TINYINT, nullable=False, server_default=text("'1'"), comment='是否启用')
-    title: Mapped[Optional[str]] = mapped_column(String(200), comment='对话标题')
 
     message: Mapped[list['Message']] = relationship('Message', back_populates='conversation')
 

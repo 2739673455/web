@@ -7,10 +7,16 @@ class TextContent(BaseModel):
     type: str = "text"
     text: str = Field(..., description="文本内容")
 
+    def to_dict(self):
+        return {"type": self.type, "text": self.text}
+
 
 class ImageContent(BaseModel):
     type: str = "image_url"
     image_url: str = Field(..., description="图片链接")
+
+    def to_dict(self):
+        return {"type": self.type, "image_url": self.image_url}
 
 
 class Attachment(BaseModel):

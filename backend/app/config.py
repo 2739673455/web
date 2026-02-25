@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import dotenv
 from omegaconf import OmegaConf
@@ -35,10 +36,24 @@ class AuthServiceCfg(BaseModel):
     verify_access_token: str
 
 
+# 模型服务
+class ModelCfg(BaseModel):
+    base_url: str
+    api_key: str
+    model_name: str
+    params: dict[str, Any] = {}
+
+
+class ModelServiceCfg(BaseModel):
+    model_code: str
+    models: dict[str, ModelCfg]
+
+
 class Cfg(BaseModel):
     db: DBCfg
     log: LogCfg
     auth_service: AuthServiceCfg
+    model_service: ModelServiceCfg
 
 
 CONFIG_DIR = Path(__file__).parent.parent / "configs"  # 配置文件目录
